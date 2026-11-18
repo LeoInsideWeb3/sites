@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeoDAX · XRP-Quoted Perpetuals: Feasibility and Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Noto+Sans+SC:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#FAF9F5; --card:#FFFFFF;
+  --ink:#1B1E24; --ink-2:#575D68; --ink-3:#9AA1AC;
+  --line:#E7E4DC; --line-2:#D2CFC5;
+  --amber:#97690A; --amber-deep:#7A5406; --amber-bg:#F6EFDC; --amber-line:#E3D3A6;
+  --green:#136F4C; --green-bg:#E7F1EA; --red:#B8433F; --red-bg:#F5E4E3;
+  --term:#16181F; --term-ink:#D7DCE5; --term-dim:#7C8494;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Noto Sans SC","PingFang SC","Hiragino Sans GB",-apple-system,"Segoe UI",sans-serif;
+  font-size:15.5px; line-height:1.85;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
+.shell{max-width:1240px; margin:0 auto; padding:0 24px 90px;
+  display:grid; grid-template-columns:220px minmax(0,1fr); gap:52px; align-items:start}
+.rail{position:sticky; top:0; padding-top:40px; max-height:100vh; overflow-y:auto}
+.rail .kicker{font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--amber); margin-bottom:6px}
+.rail .doc{font-family:"Space Grotesk","Noto Sans SC",sans-serif; font-weight:600; font-size:16px; line-height:1.35; margin-bottom:4px}
+.rail .sub{font-size:12.5px; color:var(--ink-3); margin:0 0 22px; line-height:1.6}
+.rail nav a{display:block; padding:6px 0 6px 14px; color:var(--ink-2); text-decoration:none;
+  font-size:13.5px; line-height:1.5; border-left:2px solid var(--line)}
+.rail nav a .no{font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-3); margin-right:8px}
+.rail nav a:hover{color:var(--ink); text-decoration:none}
+.rail nav a.on{color:var(--amber-deep); border-left-color:var(--amber); font-weight:500}
+.rail .lang{display:inline-block; margin:22px 0 0 16px; font-size:12px; padding:3px 10px;
+  border:1px solid var(--line-2); border-radius:6px; color:var(--ink-2); text-decoration:none}
+.rail .lang:hover{border-color:var(--amber); color:var(--amber-deep); text-decoration:none}
+.rail .foot{margin-top:18px; padding-left:16px; font-size:11.5px; color:var(--ink-3); line-height:1.8}
+.main{padding-top:34px; min-width:0}
+section{margin:40px 0 0}
+h1{font-family:"Space Grotesk","Noto Sans SC",sans-serif; font-weight:600;
+  font-size:clamp(26px,3.6vw,34px); line-height:1.2; letter-spacing:.005em; margin:0 0 12px}
+.eyebrow{font-family:"JetBrains Mono",monospace; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--amber); margin:0 0 8px}
+.lede{font-size:16px; color:var(--ink-2); max-width:72ch; margin:0 0 8px}
+.lede strong{color:var(--ink); font-weight:600}
+h2{font-size:18px; font-weight:600; margin:40px 0 12px; letter-spacing:.01em}
+h3{font-size:15px; font-weight:600; margin:28px 0 10px}
+p{max-width:72ch; margin:0 0 12px}
+code,.mono{font-family:"JetBrains Mono","SF Mono",monospace; font-size:.86em}
+p code,td code,li code,.note code,.card code{background:var(--amber-bg); color:var(--amber-deep);
+  padding:1px 5px; border-radius:4px; overflow-wrap:anywhere}
+a{color:var(--amber-deep); text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--amber); outline-offset:2px; border-radius:4px}
+.small{font-size:12.5px; color:var(--ink-3)}
+.lede code{white-space:nowrap; overflow-wrap:normal}
+
+/* cards */
+.cards{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:20px 0; max-width:900px}
+.card{background:var(--card); border:1px solid var(--line); border-left:3px solid var(--ink-3);
+  border-radius:10px; padding:14px 18px; box-shadow:0 1px 2px rgba(27,30,36,.04);
+  font-size:13.5px; line-height:1.8; color:var(--ink-2)}
+.card b{display:block; color:var(--ink); font-family:"Space Grotesk","Noto Sans SC",sans-serif;
+  font-weight:600; font-size:15px; margin-bottom:6px}
+.card.src{border-left-color:var(--ink)} .card.hot{border-left-color:var(--amber)}
+.card.evt{border-left-color:var(--green)} .card.risk{border-left-color:var(--red)}
+
+/* tables */
+.tw{overflow-x:auto; margin:18px 0; background:var(--card); border:1px solid var(--line);
+  border-radius:10px; padding:12px 16px 4px}
+table{border-collapse:collapse; width:100%; font-size:13px; line-height:1.6}
+table.wide{min-width:1040px}
+th{text-align:left; font-weight:600; font-size:11.5px; color:var(--ink-3);
+  padding:0 14px 9px 0; border-bottom:1px solid var(--line-2); white-space:nowrap}
+td{padding:9px 14px 9px 0; border-bottom:1px solid var(--line); vertical-align:top; white-space:nowrap;
+  font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+td.mono{font-family:"JetBrains Mono",monospace; font-size:12px; color:var(--ink)}
+tbody tr:hover td{background:#FCFBF7}
+table.wide th:first-child,table.wide td:first-child{position:sticky; left:0; z-index:1; background:var(--card);
+  box-shadow:1px 0 0 var(--line)}
+table.wide tbody tr:hover td:first-child{background:#FCFBF7}
+
+/* callouts */
+.note{background:var(--card); border:1px solid var(--line); border-left:3px solid var(--amber);
+  border-radius:0 10px 10px 0; padding:14px 20px; margin:18px 0; max-width:86ch;
+  font-size:13.5px; line-height:1.8; color:var(--ink-2)}
+.note.stop{border-left-color:var(--red); background:linear-gradient(90deg,var(--red-bg),var(--card) 60%)}
+.note.warn{border-left-color:var(--amber); background:linear-gradient(90deg,var(--amber-bg),var(--card) 60%)}
+.rev{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--amber);border:1px solid var(--amber-line);background:var(--amber-bg);padding:2px 8px;border-radius:2px;white-space:nowrap}
+.note.ok{border-left-color:var(--green)}
+.note h4{margin:0 0 6px; font-size:14px; font-weight:600; color:var(--ink)}
+.note p{margin:0; font-size:13.5px; color:var(--ink-2); max-width:none}
+.note p+p{margin-top:8px}
+.note b{color:var(--ink); font-weight:600}
+.note pre{margin:10px 0 8px; white-space:pre-wrap; overflow-wrap:anywhere}
+
+/* terminal */
+pre{background:var(--term); color:var(--term-ink); border-radius:10px;
+  padding:16px 20px; overflow-x:auto; margin:16px 0; max-width:100%;
+  font-family:"JetBrains Mono",monospace; font-size:12.5px; line-height:1.75}
+pre .c{color:var(--term-dim)} pre .k{color:#8FBF7A} pre .t{color:#E0B568}
+pre.tall{max-height:520px; overflow:auto}
+details.sql{margin:16px 0; border:1px solid var(--line); border-radius:10px; background:var(--card)}
+details.sql summary{cursor:pointer; padding:11px 18px; font-size:13.5px; font-weight:500; color:var(--ink);
+  list-style:none; display:flex; align-items:center; gap:10px}
+details.sql summary::-webkit-details-marker{display:none}
+details.sql summary::before{content:"+"; font-family:"JetBrains Mono",monospace; color:var(--amber); width:12px}
+details.sql[open] summary::before{content:"\2212"}
+details.sql summary .small{margin-left:auto}
+details.sql pre{margin:0; border-radius:0 0 10px 10px}
+
+/* steps */
+ol.seq{list-style:none; margin:20px 0; padding:0; counter-reset:step; max-width:86ch}
+ol.seq li{counter-increment:step; position:relative; padding:15px 0 13px 44px; border-top:1px solid var(--line)}
+ol.seq li:last-child{border-bottom:1px solid var(--line)}
+ol.seq li::before{content:counter(step,decimal-leading-zero);
+  position:absolute; left:0; top:17px; font-family:"JetBrains Mono",monospace;
+  font-size:11.5px; color:var(--amber)}
+ol.seq b{display:block; font-weight:600; margin-bottom:4px}
+ol.seq span{display:block; font-size:13.5px; color:var(--ink-2)}
+
+/* gate list */
+ul.gate{list-style:none; margin:18px 0; padding:0; max-width:86ch}
+ul.gate li{position:relative; padding:10px 0 10px 74px; border-top:1px solid var(--line);
+  font-size:13.5px; color:var(--ink-2)}
+ul.gate li:last-child{border-bottom:1px solid var(--line)}
+ul.gate li .tag{position:absolute; left:0; top:13px}
+ul.check{list-style:none; margin:18px 0; padding:0; max-width:86ch}
+ul.check li{position:relative; padding:10px 0 10px 30px; border-top:1px solid var(--line);
+  font-size:13.5px; color:var(--ink-2)}
+ul.check li:last-child{border-bottom:1px solid var(--line)}
+ul.check li::before{content:""; position:absolute; left:2px; top:16px; width:12px; height:12px;
+  border:1.5px solid var(--line-2); border-radius:3px; background:var(--card)}
+
+/* PR chips */
+.prs{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px}
+a.pr{display:inline-flex; align-items:center; gap:8px; font-size:12.5px; line-height:1.4;
+  padding:4px 10px; border:1px solid var(--amber-line); border-radius:6px; background:var(--amber-bg);
+  color:var(--amber-deep); text-decoration:none}
+a.pr:hover{border-color:var(--amber); text-decoration:none}
+a.pr .n{font-family:"JetBrains Mono",monospace; font-weight:500}
+a.pr .st{font-family:"JetBrains Mono",monospace; font-size:10.5px; color:var(--ink-3)}
+span.pr-todo{display:inline-block; font-size:12.5px; padding:4px 10px; border:1px dashed var(--line-2);
+  border-radius:6px; color:var(--ink-3)}
+ol.seq span.prs{display:flex}
+.prtable td{white-space:normal; vertical-align:middle}
+td.dim{color:var(--ink-2)}
+
+/* tags */
+.tag{display:inline-block; font-family:"JetBrains Mono",monospace; font-size:10.5px; font-weight:500;
+  padding:1px 8px; border-radius:5px; vertical-align:1px; white-space:nowrap}
+.tag.a{background:var(--amber-bg); color:var(--amber-deep)}
+.tag.keep{background:var(--green-bg); color:var(--green)}
+.tag.stop{background:var(--red-bg); color:var(--red)}
+
+.pager{display:flex; justify-content:space-between; gap:16px; margin-top:56px; padding-top:18px;
+  border-top:1px solid var(--line); font-size:13.5px}
+.pager a{color:var(--ink-2)} .pager a:hover{color:var(--amber-deep)}
+.pager .no{font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-3); margin:0 6px}
+
+@media(max-width:900px){
+  .shell{grid-template-columns:1fr; gap:8px; padding:0 18px 60px}
+  .rail{position:static; padding-top:26px; max-height:none}
+  .rail nav{display:flex; overflow-x:auto; gap:2px; padding-bottom:4px}
+  .rail nav a{white-space:nowrap; border-left:0; border-bottom:2px solid transparent; padding:6px 10px}
+  .rail nav a.on{border-bottom-color:var(--amber)}
+  .rail .foot{display:none}
+  .cards{grid-template-columns:1fr}
+}
+@media print{
+  .rail,.pager{display:none} .shell{display:block} article.panel{display:block!important}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="rail">
+  <div class="kicker">NeoDAX · Perpetuals · B-Book</div>
+  <div class="doc">XRP-Quoted Perpetuals<br>Feasibility &amp; Design</div>
+  <p class="sub">BTCXRP-PERP · ETHXRP-PERP · proposal for review</p>
+  <nav id="tabs">
+    <a href="#summary"><span class="no">01</span>Summary</a>
+    <a href="#scope"><span class="no">02</span>Product definition</a>
+    <a href="#today"><span class="no">03</span>Current state</a>
+    <a href="#margin"><span class="no">04</span>Margin model</a>
+    <a href="#price"><span class="no">05</span>Price &amp; funding</a>
+    <a href="#venues"><span class="no">05b</span>External market data</a>
+    <a href="#funds"><span class="no">06</span>Collateral &amp; USD values</a>
+    <a href="#risk"><span class="no">07</span>Risk controls &amp; launch</a>
+    <a href="#limits"><span class="no">08</span>Limitations &amp; open questions</a>
+    <a href="#work"><span class="no">09</span>Work breakdown &amp; tests</a>
+  </nav>
+  <a class="lang" href="xrp-quoted-perps-investigation.html" hreflang="zh-CN" onclick="this.href=this.href.split('#')[0]+location.hash">中文</a>
+  <div class="foot">2026-11-18 · draft v2<br>Status: for review<br>No code has been written</div>
+</aside>
+
+<div class="main">
+
+<!-- 01 summary -->
+<article class="panel" id="p-summary">
+<header>
+  <p class="eyebrow">Investigation result · draft for review</p>
+  <h1>XRP-Quoted B-Book Perpetuals: Feasibility and Design</h1>
+  <p class="lede"><strong>Feasible, medium risk.</strong> Matching, settlement, funding transfers, liquidation and ADL already work per quote asset and need no rewrite. Five things must be built: a synthetic cross price, a funding rate, XRP transfers into the perp account, per-asset margin maths, and USD conversion for downstream services.</p>
+</header>
+<div class="note">
+  <h4>What this document is</h4>
+  <p>The answer to "investigate the possibility and limitations of adding XRP B-book markets to the perpetuals (btc/xrp, eth/xrp)". Every statement about the current system was checked in the <code>neodax</code> code on 2026-11-18 and carries a file reference. Items that could not be confirmed are listed in chapter 08. This is a proposal: nothing has been implemented.</p>
+</div>
+<section>
+  <h2>Verdict by area</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>Area</th><th>Status today</th><th>Work needed</th></tr></thead><tbody>
+  <tr><td>Matching (Finex)</td><td><span class="tag keep">WORKS</span></td><td>None. B-Book orders match against resting orders, whatever the quote asset.</td></tr>
+  <tr><td>Settlement, fees, funding transfers</td><td><span class="tag keep">WORKS</span></td><td>None. All use the market's quote asset.</td></tr>
+  <tr><td>Isolated liquidation, ADL, pools</td><td><span class="tag keep">WORKS</span></td><td>Small: remove two <code>"USDT"</code> fallbacks and one symbol parser.</td></tr>
+  <tr><td>Index and mark price</td><td><span class="tag stop">MISSING</span></td><td>New: synthetic price from BTCUSDT and XRPUSDT.</td></tr>
+  <tr><td>Funding rate</td><td><span class="tag stop">MISSING</span></td><td>New: today the rate is copied from an external venue, and no venue lists these pairs.</td></tr>
+  <tr><td>XRP transfer spot &harr; perp</td><td><span class="tag stop">BLOCKED</span></td><td>Transfers accept stablecoins only. The gate needs a code change.</td></tr>
+  <tr><td>Available balance and cross margin</td><td><span class="tag stop">WRONG</span></td><td>Unrealized PnL is summed across all quote assets. Must be grouped per asset.</td></tr>
+  <tr><td>USD values (fees, volume, analytics)</td><td><span class="tag a">PARTIAL</span></td><td>Several fields treat a quote amount as USD. Convert at trade time.</td></tr>
+  <tr><td>Exposure limits for B-Book</td><td><span class="tag stop">MISSING</span></td><td>New: there is no open-interest cap for any B-Book market today.</td></tr>
+  </tbody></table></div>
+</section>
+<section>
+  <h2>Main risks</h2>
+  <div class="cards">
+    <div class="card risk"><b>Synthetic price errors</b>The mark price depends on two feeds. If either leg is stale or wrong, users can be liquidated at a wrong price. Mitigated by leg-freshness rules and safe-mode inheritance (chapter 05).</div>
+    <div class="card risk"><b>Bankruptcy losses in XRP</b>The insurance pool starts at 0, so every liquidation shortfall lands on the settlement pool as a negative XRP balance. Its USD value grows when XRP rises.</div>
+    <div class="card hot"><b>Liquidity depends on one market maker</b>These markets can never move to A-Book. If the internal MM stops quoting, the market has to go close-only.</div>
+    <div class="card hot"><b>Higher volatility</b>A cross pair moves with both BTC and XRP. Leverage must be lower and maintenance margin higher than on the USDT markets.</div>
+  </div>
+  <div class="note ok">
+    <h4>Recommended first release</h4>
+    <p>Two markets (BTCXRP-PERP, ETHXRP-PERP), <b>isolated margin only</b>, maximum leverage 10x, an open-interest cap per market, and a soft launch visible only to the market maker. Cross margin for XRP markets follows in a second phase.</p>
+  </div>
+  <p class="small">Estimated backend effort: 4 to 6 person-weeks, excluding frontend and the market maker's own work.</p>
+</section>
+<nav class="pager"><span></span><a href="#scope"><span class="no">02</span>Product definition &rarr;</a></nav>
+</article>
+
+<!-- 02 scope -->
+<article class="panel" id="p-scope">
+<header>
+  <h1>Product Definition</h1>
+  <p class="lede">The request can be read in two ways. This document follows <strong>Definition A</strong>, as confirmed by the requester.</p>
+</header>
+<div class="tw"><table class="prtable"><thead><tr><th></th><th>A. XRP-quoted, XRP-margined (chosen)</th><th>B. USDT market, XRP as collateral</th></tr></thead><tbody>
+<tr><td>Price</td><td>XRP per 1 BTC</td><td>USDT per 1 BTC</td></tr>
+<tr><td>Margin, PnL, fees</td><td>XRP</td><td>USDT, with XRP valued at a haircut</td></tr>
+<tr><td>What the user holds</td><td>Long BTC and short XRP at the same time</td><td>Long BTC only</td></tr>
+<tr><td>Engine change</td><td>Small: reuses "quote asset is the collateral"</td><td>Large: haircuts and collateral liquidation</td></tr>
+<tr><td>External liquidity and hedge</td><td>None exists; synthetic only</td><td>Unchanged</td></tr>
+</tbody></table></div>
+<section>
+  <h2>Confirmed assumptions</h2>
+  <ul class="check">
+    <li>Markets are XRP-quoted and XRP-margined. PnL and fees are paid in XRP.</li>
+    <li>Liquidity and hedging are provided by our own market maker. The MM is an ordinary perp account that rests orders through trading-api and hedges outside this repository.</li>
+    <li>The insurance pool starts with 0 XRP. Losses are accepted on the pool accounts.</li>
+    <li>The design follows the practice of the largest centralised exchanges where one applies.</li>
+  </ul>
+</section>
+<section>
+  <h2>What users should understand</h2>
+  <p>A long BTCXRP position gains when BTC rises against XRP. The gain is paid in XRP, so its USD value also depends on the XRP price. A trader who is right on BTC/XRP can still see a smaller USD result if XRP falls against the dollar. The UI should show both the XRP amount and an indicative USD value.</p>
+</section>
+<section>
+  <h2>Why most exchanges do not list this</h2>
+  <p>A check of public instrument lists on 2026-11-18 found no BTC/XRP or ETH/XRP perpetual, and no XRP-quoted market of any kind, on Binance, OKX, Bybit, Kraken, Coinbase, Bitget, Gate or Deribit (details in <a href="#venues">05b</a>). A market maker has to hedge with two legs (BTCUSDT and XRPUSDT), the hedge earns USDT while the liability is XRP, and demand is spread thin. The design below accepts these costs because we have a committed internal market maker.</p>
+  <div class="note ok">
+    <h4>Closest precedent: Binance ETHBTC perpetual</h4>
+    <p>Binance lists one perpetual with a non-stablecoin quote: <code>ETHBTC</code>, quoted and margined in BTC, live since May 2023. It is the same shape as Definition A, and its index and funding setup is the reference for this design.</p>
+  </div>
+</section>
+<nav class="pager"><a href="#summary">&larr;<span class="no">01</span>Summary</a><a href="#today"><span class="no">03</span>Current state &rarr;</a></nav>
+</article>
+
+<!-- 03 today -->
+<article class="panel" id="p-today">
+<header>
+  <h1>Current State of the Code</h1>
+  <p class="lede">Findings from reading the code. Paths are relative to the <code>neodax</code> repository; <code>pm_perp/</code> stands for <code>portfolio_manager_perp/perpetuals/</code>.</p>
+</header>
+<section>
+  <h2>How a B-Book market works today</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>Topic</th><th>Finding</th><th>Evidence</th></tr></thead><tbody>
+  <tr><td>Counterparty</td><td>A user order fills in Finex against whichever order rests on the other side. The platform is not placed as counterparty automatically. The settlement pool is a contra ledger for realized PnL; it does not take part in matching.</td><td class="mono">finex/event_handlers.go:86-89<br>pm_perp/usecase/margin_manager/settlement.go:899-923</td></tr>
+  <tr><td>Market maker</td><td>No component in the repository quotes or hedges a B-Book market. The only hook is the <code>market_maker_sessions</code> whitelist in trading-api (rate-limit bypass, access to INVISIBLE markets).</td><td class="mono">trading-api/legacy/config.go:314-317</td></tr>
+  <tr><td>Exposure limits</td><td><code>MaxNetNotional</code>, <code>MMAddress</code>, <code>BinanceSymbol</code> and mm_connector apply to A-Book only. B-Book has no open-interest or net-exposure cap.</td><td class="mono">pm_perp/usecase/market_validation.go:98-121<br>pm_perp/usecase/perpetuals_service.go:676-680</td></tr>
+  <tr><td>Balances</td><td>One balance row per (account, asset). Allocated margin is grouped by each market's quote asset.</td><td class="mono">pm_perp/domain/models/balance.go<br>pm_perp/domain/allocated_aggregate.go:18-32</td></tr>
+  <tr><td>Pools</td><td>The pool is chosen by base asset (BTCXRP &rarr; pool 1) and booked in the quote asset, so an XRP row appears automatically. The settlement pool can go negative. The insurance reserve is clamped at 0.</td><td class="mono">pm_perp/usecase/liquidation/insurance/pool.go:40-42<br>pm_perp/raft/fsm/balance.go:1008-1038</td></tr>
+  <tr><td>Creating a market</td><td>Validation accepts any non-empty <code>quote_asset</code> and a <code>-PERP</code> suffix. <code>quote_asset=XRP</code> is not rejected.</td><td class="mono">pm_perp/usecase/market_validation.go:39-47</td></tr>
+  </tbody></table></div>
+</section>
+<section>
+  <h2>What does not work for an XRP-quoted market</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>Topic</th><th>Finding</th><th>Evidence</th></tr></thead><tbody>
+  <tr><td>Price</td><td>No synthetic or cross-rate logic exists. Every source maps one internal symbol to one venue symbol in the same quote currency. The mark aggregator keeps state per symbol only.</td><td class="mono">quote/mark_price_aggregator.go:461-759<br>quote/markoracle/</td></tr>
+  <tr><td>Price cache</td><td><code>parseSymbolToMarket</code> recognises only USDT, USD and USDC suffixes. The latest-price cache would not update for BTCXRP-PERP.</td><td class="mono">quote/quotes_publisher.go:604-616</td></tr>
+  <tr><td>Funding rate</td><td>The rate is copied from the external venue. No premium index is computed. A market with no venue rate gets no funding at all: the executor skips it.</td><td class="mono">pm_perp/event/consumer/quote.go:66-117<br>pm_perp/usecase/funding_rate/executor.go:267-272</td></tr>
+  <tr><td>Transfers</td><td>Spot &harr; perp transfers require <code>is_stablecoin</code> on both sides. Flagging XRP as a stablecoin would value it at 1 USD in the perp service.</td><td class="mono">portfolio_manager_perp/grpc/account_service/transferable_assets.go:20-22<br>portfolio_manager/spot/transfer_service.go:498-500<br>pm_perp/usecase/perpetuals_service.go:5352-5410</td></tr>
+  <tr><td>Available balance</td><td>Unrealized PnL of all positions is summed and then spread over asset rows in proportion to raw balances. USDT and XRP amounts are added as plain numbers. This feeds the order pre-check and the withdrawal cap, for isolated orders too.</td><td class="mono">pm_perp/usecase/margin_manager/margin_manager.go:437-478</td></tr>
+  <tr><td>Cross liquidation</td><td>The scanner takes the quote asset of the first open position and adds the PnL of all cross positions to that one wallet. A code comment states "cross margin assumes single collateral per account for now".</td><td class="mono">pm_perp/usecase/liquidation/scanner/cross_scanner.go:323-336<br>pm_perp/usecase/liquidation/settlement/cross.go:156-163</td></tr>
+  <tr><td>Account totals</td><td>Total balance, equity and maintenance margin add the raw values of every asset.</td><td class="mono">pm_perp/usecase/perpetuals_service.go:2576-2632</td></tr>
+  <tr><td>Fee value</td><td><code>perpFeeValueUSDT</code> returns 0 for a non-USDT fee. The competition prize pool then skips these fees.</td><td class="mono">pm_perp/usecase/margin_manager/fee_collected_outbox.go:97-104<br>fee_engine/repository.go:373-375</td></tr>
+  <tr><td>Trade volume</td><td><code>TradeVolumeUSDT</code> is set to <code>amount &times; price</code>, which would be an XRP amount.</td><td class="mono">pm_perp/usecase/perpetuals_service.go:3200-3202</td></tr>
+  <tr><td>Analytics</td><td>Trade volume is converted through <code>Pricer.ToUSD</code> (correct). Funding PnL and perp equity are stored raw as USD.</td><td class="mono">analytics/handlers/trade.go:105-112<br>analytics/handlers/funding.go:45-71</td></tr>
+  <tr><td>Insurance-fund API</td><td><code>ParsePerpMarketSymbol</code> requires a <code>USDT</code> suffix, so the history endpoints reject BTCXRP-PERP.</td><td class="mono">internal/insurancefund/pool.go:116-149</td></tr>
+  <tr><td>Fallbacks</td><td>Two places fall back to <code>"USDT"</code> when the quote asset cannot be resolved.</td><td class="mono">pm_perp/usecase/perpetuals_service.go:1632-1635<br>pm_perp/usecase/liquidation/insurance/fund.go:302-307</td></tr>
+  </tbody></table></div>
+</section>
+<section>
+  <h2>Already in place</h2>
+  <ul class="check">
+    <li>XRP deposits and withdrawals through Fireblocks XRPL (<code>cage/fireblocks/xrpl.go</code>), and XRP on spot.</li>
+    <li>XRPUSDT-PERP is configured in the quote service (<code>configs/nacos/quote.yaml</code>). It is the second leg of the synthetic price.</li>
+    <li>perp_trigger (TP/SL) and trading-api order validation carry the quote asset and have no USDT-specific logic.</li>
+    <li>Position and balance events carry the margin asset. Fee treasury splits are made in kind.</li>
+  </ul>
+</section>
+<nav class="pager"><a href="#scope">&larr;<span class="no">02</span>Product definition</a><a href="#margin"><span class="no">04</span>Margin model &rarr;</a></nav>
+</article>
+
+<!-- 04 margin -->
+<article class="panel" id="p-margin">
+<header>
+  <p class="eyebrow">Design 1 of 4</p>
+  <h1>Margin Model: Separate by Quote Asset</h1>
+  <p class="lede">Follow the model the large exchanges use for USDT-margined and coin-margined futures: <strong>each collateral asset is its own margin group</strong>. XRP margin never supports a USDT position, and the reverse.</p>
+</header>
+<section>
+  <h2>Changes</h2>
+  <ol class="seq">
+    <li><b>Group all margin maths by quote asset</b><span>Unrealized PnL, maintenance margin and equity are computed per quote asset. Affected: <code>GetAllBalances</code>, <code>distributeReusableUnrealizedPnL</code> and <code>GetCrossMarginAccountEquityAtWorstCasePrices</code> in <code>margin_manager.go</code>, and the inputs of <code>calculator/cross.go</code>. The grouping helper <code>domain.SumAllocatedMarginByQuoteAsset</code> already exists and shows the pattern.</span></li>
+    <li><b>Isolated-only switch per market</b><span>Add an <code>isolated_only</code> column to <code>perps_markets</code>. The rule already exists for A-Book markets (<code>lock_prepare.go:133-136</code>, <code>margin_mode.go:33-39</code>, <code>margin_mode_cache.go:178-186</code>); generalise it from "A-Book" to "A-Book or isolated_only". XRP markets launch with it set.</span></li>
+    <li><b>Validate the order asset</b><span>PM Perp should reject a lock request whose asset is not the market's quote asset. Today it trusts trading-api.</span></li>
+    <li><b>Account totals</b><span>REST, WebSocket and Kafka account totals are either converted to USD per asset before summing, or returned per asset. The <code>*_usd</code> fields are already converted per asset and stay as they are.</span></li>
+  </ol>
+</section>
+<div class="note warn">
+  <h4>Why step 1 is needed even with isolated-only markets</h4>
+  <p>The isolated order pre-check and the withdrawal cap read the per-asset available balance, and that balance currently includes PnL from positions in other quote assets. A USDT profit would inflate the XRP available balance at the wrong scale.</p>
+</div>
+<section>
+  <h2>Phase 2: cross margin for XRP markets</h2>
+  <p>Cross margin needs the liquidation path to run per asset group: the scanner, stage 0 and stage 1, and <code>LiquidationCompleteOp</code>, which carries a single asset today (<code>raft/types/change.go:229-234</code>). The account lock is account-wide and would also need to be scoped per group. This is a separate project and is not needed for the first release.</p>
+</section>
+<nav class="pager"><a href="#today">&larr;<span class="no">03</span>Current state</a><a href="#price"><span class="no">05</span>Price &amp; funding &rarr;</a></nav>
+</article>
+
+<!-- 05 price -->
+<article class="panel" id="p-price">
+<header>
+  <p class="eyebrow">Design 2 of 4</p>
+  <h1>Synthetic Price and Funding Rate</h1>
+  <p class="lede">Both are derived from the two USDT perpetuals we already price: <strong>BTCUSDT-PERP and XRPUSDT-PERP</strong> (ETHUSDT-PERP for the ETH market).</p>
+</header>
+<section>
+  <h2>Price</h2>
+<pre><span class="c"># derived on every update of either leg</span>
+index(BTCXRP) = index(BTCUSDT) / index(XRPUSDT)
+mark(BTCXRP)  = mark(BTCUSDT)  / mark(XRPUSDT)</pre>
+  <p>Add a "derived market" stage to the quote service, placed after the existing publish point in <code>quotes_publisher.go</code>. It caches the latest output of each leg, recomputes when either changes, and publishes a normal <code>EventQuoteObserved</code> for the derived symbol. Because it consumes our own aggregated output, it works on both the legacy path and the multi-venue oracle path, and it inherits the outlier filtering of each leg.</p>
+  <h3>Protection rules</h3>
+  <ul class="gate">
+    <li><span class="tag stop">NO PRICE</span>The two legs' timestamps differ by more than a threshold (suggested 1 to 2 seconds).</li>
+    <li><span class="tag stop">SAFE</span>Either leg is in SAFE_MODE: the derived market is in SAFE_MODE.</li>
+    <li><span class="tag a">QUALITY</span>Mark quality is the worse of the two legs. <code>AllowOpen</code> is true only if both legs allow opening.</li>
+    <li><span class="tag a">PHASE 1</span>Internal trades (<code>internal_perp_trade</code>) do not feed the mark, so a thin book cannot move it.</li>
+    <li><span class="tag a">CHECK</span>Compare the synthetic price with the inverse of the XRPBTC (or XRPETH) spot mid on Binance. A sustained gap above a threshold (suggested 1%) raises an alert and blocks new opens. The spot pair is a cross-check only; it does not feed the price (see <a href="#venues">05b</a>).</li>
+  </ul>
+  <p>Also fix <code>parseSymbolToMarket</code> to read the market configuration instead of a list of quote suffixes.</p>
+</section>
+<section>
+  <h2>Funding rate</h2>
+<pre><span class="c"># long BTCXRP pays when positive</span>
+funding(BTCXRP) = funding(BTCUSDT) - funding(XRPUSDT)</pre>
+  <p>The derived stage computes the rate and sends it in the same <code>EventQuoteObserved</code>. PM Perp's intake, validation and settlement stay unchanged.</p>
+  <div class="note">
+    <h4>Why the difference of the two legs</h4>
+    <p>The market maker who is short BTCXRP hedges with long BTCUSDT and short XRPUSDT. On that hedge they pay the BTC funding and receive the XRP funding. Charging the difference on our market passes exactly that carry cost through, so the market maker is not exposed to funding arbitrage. Funding on a B-Book market moves between position holders; no house account is involved (<code>funding_rate/executor.go:206-228</code>).</p>
+  </div>
+  <p>Binance prices funding on its ETHBTC perpetual with the standard premium-index formula and an interest rate of 0. That formula needs a stable internal order book, so it should be evaluated in phase 2, once the book has depth.</p>
+  <h3>Details to handle</h3>
+  <ul class="check">
+    <li>If the two legs have different funding intervals, normalise both to the derived market's interval before subtracting.</li>
+    <li>Set <code>max_funding_rate_per_int</code> for the difference; it can be larger than either leg's cap.</li>
+    <li>Add a freshness check to the in-memory funding snapshot. Today a market whose feed stops keeps settling with its last rate (<code>funding_rate/types.go:73-82</code>).</li>
+  </ul>
+</section>
+<nav class="pager"><a href="#margin">&larr;<span class="no">04</span>Margin model</a><a href="#venues"><span class="no">05b</span>External market data &rarr;</a></nav>
+</article>
+
+<!-- 05b venues -->
+<article class="panel" id="p-venues">
+<header>
+  <p class="eyebrow">Evidence · public APIs, 2026-11-18</p>
+  <h1>Market Data Available from Other Exchanges</h1>
+  <p class="lede"><strong>No exchange publishes a mark price, index price or funding rate for BTC/XRP or ETH/XRP.</strong> What exists is the two USDT legs (which we already consume) and thin spot pairs quoted the other way round.</p>
+</header>
+<section>
+  <h2>What each venue lists</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>Venue</th><th>BTC/XRP or ETH/XRP perpetual</th><th>XRP-quoted market</th><th>Inverse spot pair</th><th>XRP perpetuals</th></tr></thead><tbody>
+  <tr><td>Binance</td><td>None</td><td>None</td><td class="mono">XRPBTC, XRPETH</td><td class="mono">XRPUSDT, XRPUSD (coin-margined)</td></tr>
+  <tr><td>OKX</td><td>None</td><td>None (no XRP-quoted index either)</td><td>None</td><td class="mono">XRP-USDT-SWAP, XRP-USD-SWAP</td></tr>
+  <tr><td>Bybit</td><td>None</td><td>None</td><td class="mono">XRPBTC</td><td class="mono">XRPUSDT, XRPUSD (inverse)</td></tr>
+  <tr><td>Kraken</td><td>None</td><td>None</td><td class="mono">XRP/XBT, XRP/ETH</td><td class="mono">PF_XRPUSD</td></tr>
+  <tr><td>Coinbase</td><td>Not checked (spot list only)</td><td>None</td><td>XRP-BTC, delisted</td><td>Not checked</td></tr>
+  <tr><td>Bitget</td><td>None (USDT futures list)</td><td>None</td><td>None</td><td class="mono">XRPUSDT</td></tr>
+  <tr><td>Gate</td><td>Not checked</td><td>None</td><td class="mono">XRP_BTC</td><td>Not checked</td></tr>
+  <tr><td>Deribit</td><td>None</td><td>None</td><td>n/a</td><td class="mono">XRP_USDC-PERPETUAL</td></tr>
+  </tbody></table></div>
+  <p class="small">Source: each venue's public instrument endpoint, read on 2026-11-18. Hyperliquid could not be reached and was not checked.</p>
+</section>
+<section>
+  <h2>The inverse spot pairs are too thin to be a price source</h2>
+  <div class="tw"><table><thead><tr><th>Pair</th><th>Venue</th><th>24h volume</th><th>Approx. USD</th><th>Spread</th></tr></thead><tbody>
+  <tr><td class="mono">XRPBTC</td><td>Binance</td><td>54.3 BTC</td><td>$3.5M</td><td>1 tick = 6.4 bps</td></tr>
+  <tr><td class="mono">XRPBTC</td><td>Bybit</td><td>31.6 BTC</td><td>$2.0M</td><td>1 tick = 6.4 bps</td></tr>
+  <tr><td class="mono">XRPETH</td><td>Binance</td><td>680 ETH</td><td>$1.2M</td><td>3.6 bps</td></tr>
+  <tr><td class="mono">XRP/XBT</td><td>Kraken</td><td>0.70M XRP</td><td>$0.7M</td><td>1.3 bps</td></tr>
+  </tbody></table></div>
+  <p>The price tick on XRPBTC is 0.00000001 BTC against a price near 0.0000155, so the price moves in steps of about 6 bps. The synthetic price from the two USDT perpetuals is far deeper and finer. At the time of the check the two agreed: 1 / 0.00001552 = 64,433 XRP per BTC from spot, against 64,301.68 / 0.998 = 64,430 from the USDT legs.</p>
+  <div class="note">
+    <h4>How to use them</h4>
+    <p>As an independent cross-check on the synthetic price (alert and block new opens on a sustained gap), not as a constituent.</p>
+  </div>
+</section>
+<section>
+  <h2>Reference design: Binance ETHBTC perpetual</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>Item</th><th>Binance ETHBTC</th><th>Use for our XRP markets</th></tr></thead><tbody>
+  <tr><td>Quote and margin asset</td><td>BTC / BTC</td><td>Same shape: XRP / XRP.</td></tr>
+  <tr><td>Index constituents</td><td>Direct spot ETHBTC on Binance (47%), OKX, Coinbase, KuCoin, HitBTC, <b>plus a synthetic cross <code>ETHUSDT/BTCUSDT</code> (14%)</b></td><td>Confirms that a synthetic cross is an accepted index source. We weight it at 100% because direct XRP-quoted spot does not exist and the inverse pairs are thin.</td></tr>
+  <tr><td>Mark and index</td><td>Published separately (<code>/fapi/v1/premiumIndex</code>)</td><td>We publish both, each derived from the legs.</td></tr>
+  <tr><td>Funding</td><td>Premium-index formula, interest rate 0, 8h interval, cap &plusmn;0.375%</td><td>Phase 1 uses the difference of the legs. The cap must cover the sum of both legs' caps (BTCUSDT &plusmn;0.30%, XRPUSDT &plusmn;0.375%).</td></tr>
+  <tr><td>Margin</td><td>Maintenance 2.5%, initial 5% (20x)</td><td>BTC/XRP is more volatile than ETH/BTC. Start at 10x with a higher maintenance rate.</td></tr>
+  <tr><td>Liquidation fee</td><td>2.0%</td><td>Use as the starting value.</td></tr>
+  <tr><td>Price band</td><td>&plusmn;10% of mark</td><td>Same as our default (0.9 / 1.1).</td></tr>
+  <tr><td>Activity</td><td>About 176 BTC per day ($11M)</td><td>Shows that demand for cross-quoted perpetuals is modest even on the largest venue.</td></tr>
+  </tbody></table></div>
+  <p class="small">Source: Binance <code>/fapi/v1/exchangeInfo</code>, <code>/fapi/v1/constituents</code>, <code>/fapi/v1/fundingInfo</code>, <code>/fapi/v1/premiumIndex</code> and <code>/fapi/v1/ticker/24hr</code>, read on 2026-11-18.</p>
+</section>
+<nav class="pager"><a href="#price">&larr;<span class="no">05</span>Price &amp; funding</a><a href="#funds"><span class="no">06</span>Collateral &amp; USD values &rarr;</a></nav>
+</article>
+
+<!-- 06 funds -->
+<article class="panel" id="p-funds">
+<header>
+  <p class="eyebrow">Design 3 of 4</p>
+  <h1>XRP Collateral and USD Values</h1>
+  <p class="lede">Users must be able to move XRP into the perp account, and every downstream number labelled USD or USDT must be a real conversion.</p>
+</header>
+<section>
+  <h2>Moving XRP into the perp account</h2>
+  <ol class="seq">
+    <li><b>New flag for transferable collateral</b><span>Add <code>is_collateral</code> to <code>perps_assets</code> (or use the <code>TransferableAssets</code> config, which is declared in <code>portfolio_manager_perp/config.go:36-37</code> but read nowhere). Change the transfer gate from <code>IsStablecoin</code> to this flag in three places: <code>transferable_assets.go</code>, <code>trading-api/legacy/transfer_handlers.go:382-433</code> and <code>portfolio_manager/spot/transfer_service.go:498-500</code>.</span></li>
+    <li><b>Keep XRP as a non-stablecoin</b><span><code>is_stablecoin=false</code>. The USD display value keeps using <code>collateralToStableMarkRate</code>, which prices XRP with the XRPUSDT-PERP mark.</span></li>
+    <li><b>Seed</b><span>Add XRP to <code>perps_assets</code> and set a minimum transfer amount.</span></li>
+  </ol>
+</section>
+<section>
+  <h2>USD conversion</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>Where</th><th>Change</th></tr></thead><tbody>
+  <tr><td>PM Perp fee event</td><td>Compute <code>FeeValueUSDT</code> and <code>TradeVolumeUSDT</code> with the XRPUSDT-PERP mark at trade time, on both the normal path and the liquidation path (<code>liquidation/order/trade_settlement.go:596</code>).</td></tr>
+  <tr><td>Analytics</td><td>Route funding PnL, perp equity and the hourly snapshot through <code>Pricer.ToUSD</code>. Confirm the XRP &rarr; XRPUSDT mapping exists.</td></tr>
+  <tr><td>Kafka events</td><td>Add an asset field to events that have none, such as <code>EventPerpetualFundingPaymentRecord</code>. A missing value means USDT, so old consumers keep working.</td></tr>
+  <tr><td>Insurance-fund package</td><td><code>ParsePerpMarketSymbol</code> reads the market configuration; the pool's quote asset is no longer hard-coded.</td></tr>
+  <tr><td>CoinMarketCap endpoints</td><td>Convert open interest and volume to USD.</td></tr>
+  <tr><td>Fallbacks</td><td>Replace the two <code>"USDT"</code> fallbacks with an error.</td></tr>
+  </tbody></table></div>
+  <div class="note">
+    <h4>Services that need no change once the events are right</h4>
+    <p>Leaderboard, competitions and fee tiers read USD volume from analytics. Referral commission is converted by selling the fee asset on spot, which needs an XRPUSDT spot market. The fee treasury split is made in kind.</p>
+  </div>
+</section>
+<nav class="pager"><a href="#venues">&larr;<span class="no">05b</span>External market data</a><a href="#risk"><span class="no">07</span>Risk controls &amp; launch &rarr;</a></nav>
+</article>
+
+<!-- 07 risk -->
+<article class="panel" id="p-risk">
+<header>
+  <p class="eyebrow">Design 4 of 4</p>
+  <h1>Risk Controls and Launch</h1>
+  <p class="lede">The market maker carries the directional risk. The platform's remaining exposure is <strong>liquidation shortfalls</strong>, which land on the settlement pool in XRP.</p>
+</header>
+<section>
+  <h2>Where a loss goes</h2>
+  <ol class="seq">
+    <li><b>User margin</b><span>An isolated position can lose at most its allocated margin. User accounts cannot go negative from a trade (<code>margin_manager/settlement.go:243-275</code>).</span></li>
+    <li><b>Insurance pool (XRP)</b><span>Starts at 0 and is clamped at 0. It grows only from liquidation fees and surplus.</span></li>
+    <li><b>Settlement pool (XRP)</b><span>Absorbs whatever the insurance pool cannot cover and may go negative ("unfunded absorbed by settlement", <code>raft/fsm/balance.go:1008-1038</code>). This is the account that records the accepted loss.</span></li>
+  </ol>
+  <div class="note warn">
+    <h4>The loss is in XRP</h4>
+    <p>A negative XRP balance is a liability whose USD value rises when XRP rises. Treasury should decide whether to cover it periodically or let it run.</p>
+  </div>
+</section>
+<section>
+  <h2>New controls</h2>
+  <div class="cards">
+    <div class="card risk"><b>Open-interest cap per market</b>Expressed in the quote asset. When reached, only reducing orders are accepted. B-Book has no such limit today.</div>
+    <div class="card risk"><b>Settlement-pool alert and auto close-only</b>Alert when the XRP balance turns negative. Past a threshold, switch the market to close-only through the existing <code>operational_state</code>.</div>
+    <div class="card hot"><b>Conservative parameters</b>Maximum leverage 10x. Maintenance margin above the USDT market of the same base asset.</div>
+    <div class="card hot"><b>Parameters in XRP units</b>Risk tiers, <code>min_notional</code>, tick size and precision are set per market. The default <code>min_notional=1</code> would mean 1 XRP.</div>
+  </div>
+</section>
+<section>
+  <h2>Launch sequence</h2>
+  <ol class="seq">
+    <li><b>Create the markets as INVISIBLE</b><span>Only sessions in <code>market_maker_sessions</code> can see and trade them.</span></li>
+    <li><b>Market maker funds and quotes</b><span>The MM account transfers XRP in and rests two-sided orders.</span></li>
+    <li><b>Drills</b><span>Run one funding settlement and one forced isolated liquidation with test accounts. Check the pool balances and alerts.</span></li>
+    <li><b>Open to users</b><span>One market first. Open the second after an observation window.</span></li>
+  </ol>
+</section>
+<nav class="pager"><a href="#funds">&larr;<span class="no">06</span>Collateral &amp; USD values</a><a href="#limits"><span class="no">08</span>Limitations &amp; open questions &rarr;</a></nav>
+</article>
+
+<!-- 08 limits -->
+<article class="panel" id="p-limits">
+<header>
+  <h1>Limitations and Open Questions</h1>
+  <p class="lede">What the first release will not do, what it depends on, and what still needs an answer.</p>
+</header>
+<section>
+  <h2>Limitations</h2>
+  <ul class="gate">
+    <li><span class="tag stop">NEVER</span>These markets cannot move to A-Book. No external venue lists the contracts (checked 2026-11-18), and mm_connector requires a Binance symbol.</li>
+    <li><span class="tag stop">MM</span>Liquidity depends entirely on the internal market maker. If it stops, the market goes close-only.</li>
+    <li><span class="tag a">PHASE 1</span>No cross margin. XRP collateral cannot offset USDT positions, and the reverse.</li>
+    <li><span class="tag a">LOSS</span>Bankruptcy losses are in XRP and land on the settlement pool, because the insurance pool starts at 0.</li>
+    <li><span class="tag a">DEPENDS</span>XRPUSDT-PERP must stay live: the synthetic price, the funding rate and USD conversion all use it.</li>
+    <li><span class="tag a">DEPENDS</span>An XRPUSDT spot market must be listed: referral conversion and analytics pricing use it.</li>
+  </ul>
+</section>
+<section>
+  <h2>Open questions</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>#</th><th>Question</th><th>Owner</th><th>Effect</th></tr></thead><tbody>
+  <tr><td>1</td><td>Does production quote run the legacy path or the multi-venue oracle path? Both flags are off in the repository config, and deployed values may differ.</td><td>DevOps</td><td>Test scope only; the design covers both.</td></tr>
+  <tr><td>2</td><td>Does the market maker accept "difference of the two legs" as the funding rate?</td><td>MM team</td><td>Funding design.</td></tr>
+  <tr><td>3</td><td>Values for the open-interest cap and the settlement-pool threshold.</td><td>Risk</td><td>Configuration.</td></tr>
+  <tr><td>4</td><td>Who covers a negative XRP settlement balance, and how often?</td><td>Treasury</td><td>Operations.</td></tr>
+  <tr><td>5</td><td>Frontend and API documentation scope. The frontend repository was not reviewed.</td><td>Frontend</td><td>Effort estimate.</td></tr>
+  </tbody></table></div>
+</section>
+<section>
+  <h2>Not confirmed in this investigation</h2>
+  <ul class="check">
+    <li>How the analytics consumer behaves when <code>Pricer.ToUSD</code> returns <code>ErrNoPriceDeferred</code> (retry or stall).</li>
+    <li>The effect of a mixed USDT and XRP pool on ADL thresholds.</li>
+    <li>The fee buyback path for XRP fees was not traced in depth.</li>
+    <li>Hyperliquid and smaller venues were not checked for BTC/XRP or ETH/XRP perpetuals.</li>
+  </ul>
+</section>
+<nav class="pager"><a href="#risk">&larr;<span class="no">07</span>Risk controls &amp; launch</a><a href="#work"><span class="no">09</span>Work breakdown &amp; tests &rarr;</a></nav>
+</article>
+
+<!-- 09 work -->
+<article class="panel" id="p-work">
+<header>
+  <h1>Proposed Work Breakdown and Test Plan</h1>
+  <p class="lede">For review only. Nothing here starts until this proposal is approved.</p>
+</header>
+<section>
+  <h2>Proposed pull requests</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>PR</th><th>Content</th><th>Services</th></tr></thead><tbody>
+  <tr><td class="mono">1</td><td>Margin maths grouped by quote asset, the <code>isolated_only</code> switch, order-asset validation</td><td>PM Perp</td></tr>
+  <tr><td class="mono">2</td><td>Collateral transfer flag</td><td>PM Perp, PM Spot, trading-api</td></tr>
+  <tr><td class="mono">3</td><td>Derived market in quote: synthetic price and funding rate</td><td>Quote</td></tr>
+  <tr><td class="mono">4</td><td>USD conversion and event asset fields</td><td>PM Perp, analytics, insurancefund, trading-api</td></tr>
+  <tr><td class="mono">5</td><td>Open-interest cap and settlement-pool alert</td><td>PM Perp, monitoring</td></tr>
+  <tr><td class="mono">6</td><td>Seeds and config: XRP asset, two markets, risk tiers, quote config</td><td>PM Perp, Quote</td></tr>
+  </tbody></table></div>
+  <p class="small">PR 1 and PR 2 are independent of the new markets and safe to ship first. Rough backend total: 4 to 6 person-weeks.</p>
+</section>
+<section>
+  <h2>Unit tests</h2>
+  <ul class="check">
+    <li>Available balance and equity per asset for an account holding USDT and XRP positions together.</li>
+    <li>Synthetic price: a stale leg produces no price; SAFE_MODE on a leg propagates.</li>
+    <li>Funding: the difference of two legs, including interval normalisation.</li>
+    <li>The USDT value of an XRP fee is greater than 0 and matches the mark used.</li>
+  </ul>
+</section>
+<section>
+  <h2>Integration tests (local stack or UAT)</h2>
+  <ul class="check">
+    <li>XRP transfers from spot to perp succeed; USDT behaviour is unchanged.</li>
+    <li>INVISIBLE market: the MM account rests orders; a user opens and closes an isolated position; PnL and fees are booked in XRP.</li>
+    <li>A cross-margin order on an XRP market is rejected with <code>isolated_margin_required</code>.</li>
+    <li>One funding settlement: the amounts paid by longs and received by shorts are equal.</li>
+    <li>A forced isolated liquidation with the insurance pool at 0: the shortfall appears on the settlement pool's XRP balance and the alert fires.</li>
+    <li>Analytics USD values for volume, fees and funding match a manual calculation.</li>
+  </ul>
+</section>
+<section>
+  <h2>Regression</h2>
+<pre>go test ./portfolio_manager_perp/... ./quote/... ./analytics/...</pre>
+  <p>All existing USDT-market tests for margin, liquidation and funding must pass unchanged.</p>
+</section>
+<nav class="pager"><a href="#limits">&larr;<span class="no">08</span>Limitations &amp; open questions</a><span></span></nav>
+</article>
+
+</div><!-- main -->
+</div><!-- shell -->
+
+<script>
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('#tabs a'));
+  var panels=[].slice.call(document.querySelectorAll('article.panel'));
+  var ids=tabs.map(function(a){return a.getAttribute('href').slice(1);});
+  function show(id,scroll){
+    if(ids.indexOf(id)<0) id=ids[0];
+    panels.forEach(function(p){p.hidden=p.id!=='p-'+id;});
+    tabs.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+id);});
+    if(scroll) window.scrollTo({top:0,behavior:'instant'});
+  }
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('a[href^="#"]');
+    if(!a) return;
+    var id=a.getAttribute('href').slice(1);
+    if(ids.indexOf(id)<0) return;
+    e.preventDefault();
+    history.replaceState(null,'','#'+id);
+    show(id,true);
+  });
+  window.addEventListener('hashchange',function(){show(location.hash.slice(1),true);});
+  show(location.hash.slice(1),false);
+})();
+</script>
+</body>
+</html>
