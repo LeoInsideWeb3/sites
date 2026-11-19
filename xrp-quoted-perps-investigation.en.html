@@ -190,6 +190,7 @@ td.dim{color:var(--ink-2)}
     <a href="#today"><span class="no">03</span>Current state</a>
     <a href="#margin"><span class="no">04</span>Margin model</a>
     <a href="#price"><span class="no">05</span>Price &amp; funding</a>
+    <a href="#rules"><span class="no">05a</span>Market rulebook</a>
     <a href="#venues"><span class="no">05b</span>External market data</a>
     <a href="#funds"><span class="no">06</span>Collateral &amp; USD values</a>
     <a href="#risk"><span class="no">07</span>Risk controls &amp; launch</a>
@@ -197,7 +198,7 @@ td.dim{color:var(--ink-2)}
     <a href="#work"><span class="no">09</span>Work breakdown &amp; tests</a>
   </nav>
   <a class="lang" href="xrp-quoted-perps-investigation.html" hreflang="zh-CN" onclick="this.href=this.href.split('#')[0]+location.hash">中文</a>
-  <div class="foot">2026-11-18 · draft v2<br>Status: for review<br>No code has been written</div>
+  <div class="foot">2026-11-19 · draft v3<br>Status: for review<br>No code has been written</div>
 </aside>
 
 <div class="main">
@@ -394,7 +395,172 @@ funding(BTCXRP) = funding(BTCUSDT) - funding(XRPUSDT)</pre>
     <li>Add a freshness check to the in-memory funding snapshot. Today a market whose feed stops keeps settling with its last rate (<code>funding_rate/types.go:73-82</code>).</li>
   </ul>
 </section>
-<nav class="pager"><a href="#margin">&larr;<span class="no">04</span>Margin model</a><a href="#venues"><span class="no">05b</span>External market data &rarr;</a></nav>
+<nav class="pager"><a href="#margin">&larr;<span class="no">04</span>Margin model</a><a href="#rules"><span class="no">05a</span>Market rulebook &rarr;</a></nav>
+</article>
+
+<!-- 05a rulebook -->
+<article class="panel" id="p-rules">
+<header>
+  <p class="eyebrow">Specification</p>
+  <h1>Market Rulebook: Index, Mark, Funding, Fees</h1>
+  <p class="lede">The exact rules a reviewer can check. <span class="tag keep">EXISTING</span> means what USDT perpetuals do today (verified in code). <span class="tag stop">NEW</span> means what the XRP markets add. <strong>TODO</strong> marks a value that needs a risk decision before launch. Numbers in worked examples are illustrative.</p>
+</header>
+
+<section>
+  <h2>1. Parameter sheet</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>Parameter</th><th>BTCXRP-PERP / ETHXRP-PERP</th><th>Note</th></tr></thead><tbody>
+  <tr><td>Base / quote / margin asset</td><td>BTC (ETH) / XRP / XRP</td><td>Definition A: PnL, fees and funding are all in XRP.</td></tr>
+  <tr><td>Contract type</td><td>Linear in the quote asset</td><td>Amount in base units. Price in XRP per base. Notional (XRP) = amount &times; price. PnL (XRP) = amount &times; (exit &minus; entry) for a long.</td></tr>
+  <tr><td>Execution book</td><td><code>B_BOOK</code></td><td>Counterparty is whoever rests on the book; our market maker supplies depth.</td></tr>
+  <tr><td>Margin mode</td><td>Isolated only (phase 1)</td><td>Section 04.</td></tr>
+  <tr><td>Max leverage</td><td>10x</td><td>Binance ETHBTC allows 20x. BTC/XRP is more volatile. TODO risk to confirm.</td></tr>
+  <tr><td>Maintenance margin rate</td><td>TODO, higher than the same-base USDT market</td><td>Binance ETHBTC uses 2.5% for the first tier.</td></tr>
+  <tr><td>Funding interval</td><td>28800 s (8 h)</td><td><code>funding_interval_seconds</code> default. Settlement instants align to UTC midnight and the interval: 00:00, 08:00, 16:00 (<code>settlement_time.go</code>).</td></tr>
+  <tr><td>Funding cap per interval</td><td>&plusmn;0.675% (TODO)</td><td>Sum of the two legs' caps (BTCUSDT 0.30% + XRPUSDT 0.375%) so the cap never clips a legitimate difference. The code default is 0.3%.</td></tr>
+  <tr><td>Interest rate component</td><td>None</td><td><code>interest_rate_per_interval</code> exists on the market row but no code reads it. The rate is not added.</td></tr>
+  <tr><td>Price band for orders</td><td>0.9 &times; mark to 1.1 &times; mark</td><td>Existing default (<code>price_min_ratio</code>, <code>price_max_ratio</code>). Same as Binance ETHBTC.</td></tr>
+  <tr><td>Maker / taker fee</td><td>Same bps as the same-base USDT market, charged in XRP</td><td>Section 5.</td></tr>
+  <tr><td>Liquidation fee</td><td>2.0% of liquidated notional (TODO)</td><td><code>liquidation_fee_rate</code>. Binance ETHBTC uses 2.0%.</td></tr>
+  <tr><td>Tick, step, min qty, min notional</td><td>TODO, in XRP units</td><td>The default <code>min_notional=1</code> would mean 1 XRP. Set explicitly.</td></tr>
+  </tbody></table></div>
+</section>
+
+<section>
+  <h2>2. Index price</h2>
+  <p>The index is the reference spot-like price of the pair. It is not used for PnL or liquidation (the mark is). It is used for display, for the mark/index deviation guard, and as the base of a future basis term.</p>
+  <h3>Today's source <span class="tag keep">EXISTING</span></h3>
+  <p>For USDT markets the index is relayed from Binance's own multi-exchange index (<code>IndexPrice</code>, field <code>i</code> in <code>binance_perp/types.go</code>) inside the auxiliary data of <code>EventQuoteObserved</code>. Our weighted mark aggregator does not compute the index.</p>
+  <h3>Rule for the XRP markets <span class="tag stop">NEW</span></h3>
+<pre><span class="c"># recomputed whenever either leg's index changes</span>
+index(BTCXRP) = index(BTCUSDT) / index(XRPUSDT)
+index(ETHXRP) = index(ETHUSDT) / index(XRPUSDT)
+<span class="c"># rounded to the market's price precision with the publisher's existing rounding</span></pre>
+  <ul class="gate">
+    <li><span class="tag stop">NO UPDATE</span>Either leg index is missing, zero, or older than <strong>2 s</strong> (TODO). The previous derived index stays in place. It is never computed from one fresh and one stale leg.</li>
+    <li><span class="tag stop">STALE</span>The derived index is older than <strong>10 s</strong> (TODO). The market goes to SAFE_MODE (same trigger time as <code>safe_mode_zero_sources_sec</code>).</li>
+    <li><span class="tag a">OUTPUT</span>Published in the same event and topic as every other market's index, so consumers need no change.</li>
+  </ul>
+  <p>Industry practice (section 6): 3 to 6 spot venues, a venue more than 3% to 5% from the median is capped or dropped (1% for BTC, ETH, XRP on Binance), a venue silent for 3 to 15 minutes is dropped, and a synthetic cross is accepted for pairs without a direct market. Our legs already follow this through Binance's own index.</p>
+  <p>A ratio of two composite indices inherits the outlier filtering of each. Binance's own ETHBTC index uses the same idea: a synthetic cross <code>ETHUSDT/BTCUSDT</code> is one of its constituents (05b).</p>
+</section>
+
+<section>
+  <h2>3. Mark price</h2>
+  <p>The mark drives unrealised PnL, margin, liquidation and the funding notional. It is never the last trade price.</p>
+  <h3>Today's source <span class="tag keep">EXISTING</span></h3>
+  <p>Each USDT market has a weighted aggregate of venue marks (for example BTCUSDT-PERP: Binance 50%, OKX 30%, Bybit 15%, internal trades 5%) over a 200 ms window. It runs in modes NORMAL, DEGRADED (a 2-source blend <code>0.7 &times; raw + 0.3 &times; anchor</code>) and SAFE_MODE (price frozen). A source drops offline after 10 s without data or a 5% deviation. See <code>configs/nacos/quote.yaml</code>.</p>
+  <h3>Rule for the XRP markets <span class="tag stop">NEW</span>, phase 1</h3>
+<pre>mark(BTCXRP) = mark(BTCUSDT) / mark(XRPUSDT)    <span class="c"># each leg is the aggregator's output for that market</span></pre>
+  <p>Internal trades on the XRP market do not feed the mark in phase 1, so a thin book cannot move it. Each leg's value already carries the 200 ms windowing and the outlier handling above.</p>
+  <h3>Quality state of the derived mark</h3>
+  <div class="tw"><table class="prtable"><thead><tr><th>Leg A state</th><th>Leg B state</th><th>Derived state</th><th>Price</th><th>Opening new positions</th></tr></thead><tbody>
+  <tr><td>NORMAL</td><td>NORMAL</td><td>NORMAL</td><td>A / B</td><td>Allowed</td></tr>
+  <tr><td>DEGRADED</td><td>any non-SAFE</td><td>DEGRADED</td><td>A / B (each leg already blended)</td><td>Allowed only if both legs allow</td></tr>
+  <tr><td>SAFE_MODE</td><td>any</td><td>SAFE_MODE</td><td><strong>Frozen at the last NORMAL derived mark.</strong> Not recomputed from frozen legs, which would drift as the other leg moves.</td><td>Blocked</td></tr>
+  <tr><td>no update &gt; 2 s</td><td>any</td><td>DEGRADED, then SAFE_MODE after 10 s</td><td>Last derived value</td><td>Blocked</td></tr>
+  </tbody></table></div>
+  <p><strong>Recovery.</strong> Both legs NORMAL for the existing 10 s warm-up (<code>recovery_warmup_sec</code>), then the hold clears on the same auto-clear rule as other markets.</p>
+  <h3>Guards <span class="tag stop">NEW</span></h3>
+  <ul class="check">
+    <li>|mark &minus; index| / index above <strong>2%</strong> (TODO): alert and block new opens. With both derived from the same legs this should not trigger; it catches a bad leg.</li>
+    <li>Gap above <strong>1%</strong> against the inverse of the Binance XRPBTC or XRPETH spot mid: alert and block new opens. Cross-check only, never an input (05b).</li>
+  </ul>
+  <h3>Phase 2: add a basis term (every major venue has one)</h3>
+  <p>A pure ratio ignores our own order book. Binance, Bybit, Bitget, Gate and Hyperliquid take the <strong>median of three</strong>: (1) index &times; (1 + last funding rate &times; time to next funding / interval), (2) index + moving average of (book mid &minus; index), (3) last trade. OKX, Deribit and Kraken use index + EMA of (mid &minus; index). The basis window is 30 s on Binance, Bitget and Kraken, 2.5 min on Bybit, 5 min on Gate, 150 s on Hyperliquid. Phase 2 adopts the median-of-three with a 30 s basis, once the XRP book has stable depth and the market maker's quoting is proven. Until then a thin book must not move the mark.</p>
+  <div class="note"><h4>Worked example (illustrative)</h4><p>mark(BTCUSDT) = 90,000 and mark(XRPUSDT) = 2.00 give mark(BTCXRP) = 45,000 XRP per BTC. A long of 0.1 BTC opened at 45,000 has notional 4,500 XRP. If the mark rises to 46,000, unrealised PnL = 0.1 &times; 1,000 = +100 XRP.</p></div>
+</section>
+
+<section>
+  <h2>4. Funding rate</h2>
+  <h3>Rate computation <span class="tag stop">NEW</span></h3>
+<pre><span class="c"># every update; T = 28800 s</span>
+f_B' = f(BTCUSDT) &times; T / T_BTCUSDT          <span class="c"># normalise leg interval to T</span>
+f_X' = f(XRPUSDT) &times; T / T_XRPUSDT
+raw  = f_B' &minus; f_X'
+rate = clamp(raw, &minus;cap, +cap)             <span class="c"># cap = max_funding_rate_per_int</span></pre>
+  <p>Sent in the funding auxiliary data of the derived <code>EventQuoteObserved</code>; PM Perp's intake and validation stay as they are.</p>
+  <div class="tw"><table class="prtable"><thead><tr><th>BTCUSDT rate</th><th>XRPUSDT rate</th><th>BTCXRP rate</th><th>Who pays</th></tr></thead><tbody>
+  <tr><td>+0.010%</td><td>+0.010%</td><td>0.000%</td><td>Nobody</td></tr>
+  <tr><td>+0.030%</td><td>+0.010%</td><td>+0.020%</td><td>Longs pay shorts</td></tr>
+  <tr><td>+0.010%</td><td>+0.040%</td><td>&minus;0.030%</td><td>Shorts pay longs</td></tr>
+  </tbody></table></div>
+  <ul class="gate">
+    <li><span class="tag stop">SKIP</span>At settlement, a leg's rate older than <strong>60 s</strong> (TODO) means the interval is skipped for that market, with an alert. No stale rate is charged. An operator backfill tool exists (<code>funding_rate/backfill.go</code>); whether it supports derived markets must be confirmed.</li>
+    <li><span class="tag a">CHANGE</span>Today a market whose feed stops keeps settling with its last rate (<code>funding_rate/types.go:73-82</code>). The freshness check applies to all markets.</li>
+  </ul>
+  <h3>Settlement <span class="tag keep">EXISTING</span></h3>
+<pre>payment_XRP = position_amount &times; mark_at_settlement &times; rate
+rate &gt; 0: long pays, short receives
+rate &lt; 0: short pays, long receives</pre>
+  <ul class="check">
+    <li>Runs at each aligned instant for every open position. Positions locked for liquidation are skipped (<code>executor.go:119-125</code>).</li>
+    <li>On a B-Book market the money moves between position holders; no house account is involved (<code>executor.go:206-228</code>). Longs' total equals shorts' total only if open interest is balanced, which it always is on a matched book.</li>
+    <li>Each payment is recorded as <code>EventPerpetualFundingPaymentRecord</code> in the quote asset.</li>
+  </ul>
+  <h3>Phase 2: standard premium-index formula <span class="tag a">PLAN</span></h3>
+  <p>Used by Binance, OKX, Bybit, Bitget, Gate, BitMEX, dYdX and Hyperliquid, with small parameter differences (section 6):</p>
+<pre>P_t = [max(0, impactBid &minus; index) &minus; max(0, index &minus; impactAsk)] / index
+      <span class="c"># impact price = price to fill the impact notional on our book</span>
+      <span class="c"># impact notional = 200 USDT / initial margin rate, converted to XRP at mark(XRPUSDT)</span>
+avgP = weighted average of P_t, sampled every 5 s, weights 1..n (later samples count more)
+F    = clamp( avgP + clamp(I &minus; avgP, &minus;0.05%, +0.05%), &minus;cap, +cap )
+I    = 0 for a cross market (Binance ETHBTC uses 0); 0.01% per 8 h on USDT markets</pre>
+  <p>It needs a continuous two-sided book, otherwise the impact price is undefined and P falls to 0. It also makes funding pull the book toward the mark. We can run it together with the leg difference (carry component) as <code>F = carry + premium term</code>. The split is a risk decision (TODO).</p>
+  <h3>Dynamic interval</h3>
+  <p>Binance, OKX, Bybit and Gate shorten the interval to 1 h, 2 h or 4 h when the rate hits its cap, and restore it after stable cycles (Binance: 16 cycles at or below 0.025%). Phase 1 fixes the XRP markets at 8 h. If a leg switches interval, the normalisation above keeps the difference correct. Dynamic intervals are phase 2.</p>
+  <div class="note"><h4>What funding does not do here</h4><p>The rate has no premium component, so funding does not pull the book price toward the mark. Convergence comes from the market maker's hedge. If the book trades away from the mark, only arbitrage by the maker closes the gap. Phase 2 may add the premium-index term.</p></div>
+  <div class="note"><h4>Worked example (illustrative)</h4><p>Rate +0.020%, long 0.1 BTC, mark 45,000: payment = 0.1 &times; 45,000 &times; 0.0002 = 0.9 XRP, paid by the long to the short.</p></div>
+</section>
+
+<section>
+  <h2>5. Trading fees</h2>
+  <h3>Calculation <span class="tag keep">EXISTING</span></h3>
+<pre>fee = amount &times; price &times; rate
+rate = maker rate if the order rested, taker rate if it crossed</pre>
+  <p>The rate comes from the fee engine: volume tiers per account, with a per-market override (<code>CalculateTradingFee</code>, <code>perpetuals_service.go:3845-3878</code>). The config default is maker 0.02%, taker 0.06%, and the fee-engine perp tiers start at 3.5 bps taker and fall with volume. The fee is computed in the market's quote asset, so for XRP it is already in XRP.</p>
+  <h3>Rules for the XRP markets <span class="tag stop">NEW</span></h3>
+  <ul class="check">
+    <li><strong>Rate level.</strong> Same bps ladder as the same-base USDT market, so a user sees one fee schedule. The fee is debited in XRP from the isolated position's XRP margin.</li>
+    <li><strong>Reserve at order time.</strong> Initial margin plus taker fee on notional, both in XRP, are locked when the order is placed.</li>
+    <li><strong>Volume for tiering and campaigns.</strong> USD volume = XRP notional &times; mark(XRPUSDT) at trade time. Today <code>TradeVolumeUSDT</code> takes the quote notional as is, which would undercount XRP volume by the XRP price (section 06).</li>
+    <li><strong>USD value of the fee.</strong> fee_XRP &times; mark(XRPUSDT). Today it comes out as 0 for XRP (section 06).</li>
+    <li><strong>Rebates and referral payouts.</strong> TODO: pay in XRP, or convert to USDT through XRPUSDT spot. The second needs the XRPUSDT spot market to be live.</li>
+    <li><strong>Liquidation fee.</strong> <code>liquidation_fee_rate</code> &times; liquidated notional, in XRP, credited to the insurance pool of the base asset. TODO: confirm the exact path in the liquidation code before implementation. Venues differ: Binance charges a clearance fee into the insurance fund, OKX charges the taker rate, Bybit and Hyperliquid charge none (section 6).</li>
+    <li><strong>Fee currency precedent.</strong> Binance COIN-M and OKX coin-margined contracts charge the fee in the margin coin, which is the same shape as an XRP fee.</li>
+    <li>Funding payments carry no fee.</li>
+  </ul>
+  <div class="note"><h4>Worked example (illustrative)</h4><p>A taker buys 0.1 BTC at 45,000 at 10x. Notional 4,500 XRP; initial margin 450 XRP; taker fee at 6 bps = 2.7 XRP; maker fee at 2 bps would be 0.9 XRP. With XRPUSDT at 2.00 the taker fee is worth 5.4 USD and the trade counts as 9,000 USD of volume.</p></div>
+  <h3>Liquidation price (isolated long, approximate, fees ignored)</h3>
+<pre>liq_price_long  &asymp; entry &times; (1 &minus; 1/leverage + MMR)
+liq_price_short &asymp; entry &times; (1 + 1/leverage &minus; MMR)</pre>
+</section>
+
+<section>
+  <h2>6. What other exchanges do</h2>
+  <p>Read from official pages on 2026-11-19. <strong>UNVERIFIED</strong> means the official page could not be opened or does not state it, so the value came from a search summary or third party.</p>
+  <div class="tw"><table class="prtable"><thead><tr><th>Venue</th><th>Index</th><th>Mark</th><th>Funding</th><th>Fees</th></tr></thead><tbody>
+  <tr><td>Binance USD-M</td><td>Weighted multi-venue. Source &gt;3% from median capped (1% for BTC, ETH, BNB, SOL, XRP). Silent 5 min: weight 0. Synthetic cross for pairs without a direct market.</td><td>Median(index&times;(1+funding&times;t/T), index+MA30s(basis), last)</td><td>Impact-price premium, 5 s samples, weighted 1..n. F = avgP + clamp(I&minus;avgP, &plusmn;0.05%). I = 0.01% per 8 h (0 on ETHBTC). Cap &plusmn;0.75&times;MMR on majors, &plusmn;2% others. 8 h at 00/08/16 UTC; drops to 1 h after hitting the cap, back to 4 h after 16 quiet cycles. Pay = mark &times; size &times; F.</td><td>Notional &times; rate. USDT on USD-M, base coin on COIN-M. Example 0.02% / 0.05%. Liquidation clearance fee into the insurance fund.</td></tr>
+  <tr><td>OKX</td><td>Weighted sources; 2 sources equal weight; outliers pulled to median (threshold UNVERIFIED).</td><td>Index + MA(mid &minus; index). Window UNVERIFIED.</td><td>Same shape as Binance, 1-minute samples, I = 0.01% per 8 h, interval 1/2/4/8 h, steps down when at the cap and back after 12 h within &plusmn;0.20%. Pay = value &times; rate at mark.</td><td>Notional &times; rate, in USDT or in the coin for coin-margined. Rates UNVERIFIED. Liquidation at the taker rate.</td></tr>
+  <tr><td>Bybit</td><td>Top 6 spot pairs by volume, weights from 24 h volume, updated hourly. &gt;5% from median excluded (1% BTC, ETH). Silent 15 min dropped.</td><td>Median(index&times;(1+funding&times;t/8), index+MA2.5min(basis), last). Falls back to last price if spot is abnormal.</td><td>8 h at 00/08/16 UTC, hourly if the cap is hit. Formula UNVERIFIED (search summary: premium + clamp, I = 0.01%).</td><td>Notional basis. 0.02% / 0.055% (UNVERIFIED). No liquidation fee, per-contract insurance fund.</td></tr>
+  <tr><td>Bitget</td><td>Up to 6 venues, 200 ms updates. &gt;5% from median excluded, re-included below 2%. Index moves above 0.1% are smoothed.</td><td>Median(last, index&times;(1+funding&times;t), index+MA30s(basis)). Sources conflict on window.</td><td>Binance-style, 5 s samples, 5,760 per cycle, cap &plusmn;0.75&times;MMR, 8 h, some contracts 2 or 4 h.</td><td>0.02% to 0.06% by tier. Currency not stated.</td></tr>
+  <tr><td>Gate</td><td>Not read (UNVERIFIED).</td><td>Median(index&times;(1+funding&times;t/T), index+MA5min(basis), last). Capped to index &times; (1 &plusmn; max deviation).</td><td>60 s samples, linear weights, I = base/3 with base 0.03% for crypto, cap per contract. 8 h or 4 h; hits the cap then 1 h, back after 16 quiet settlements.</td><td>UNVERIFIED.</td></tr>
+  <tr><td>Kraken Futures</td><td>UNVERIFIED.</td><td>Index + EMA30s(impact mid &minus; index), premium capped at 1%.</td><td>Hourly settlement, 60 samples per hour, middle 30 averaged, divided by 8, clamp &plusmn;0.5% per hour. Pay = contracts &times; rate &times; time held.</td><td>UNVERIFIED (search: 0.02% / 0.05%). Multi-collateral in USD.</td></tr>
+  <tr><td>Coinbase Intl</td><td>UNVERIFIED.</td><td>Median(bid, ask, last) (search summary).</td><td>Hourly. Premium/24, TWAP smoothed (search summary).</td><td>Tiers from &minus;0.005% maker / 0.015% taker (liquidity program page).</td></tr>
+  <tr><td>BitMEX</td><td>UNVERIFIED. Has a .BETHXBT index.</td><td>Index &times; (1 + funding &times; t/T) (official post).</td><td>Premium + clamp(I&minus;P, &plusmn;0.05%), 8 h TWAP, 04/12/20 UTC (search summary).</td><td>UNVERIFIED.</td></tr>
+  <tr><td>Deribit</td><td>Mid prices of Coinbase, Kraken, LMAX; &plusmn;0.5% from median clamped (2019 post).</td><td>Index + EMA(bounded mid &minus; index) (search summary).</td><td>Premium dead zone &plusmn;0.025%, cap &plusmn;0.5% (BTC), &plusmn;1% (ETH) per 8 h, accrued continuously, paid in the coin on inverse contracts.</td><td>0% / 0.05% base (third party). Liquidation fee 1% (third party).</td></tr>
+  <tr><td>dYdX v4</td><td>Oracle price only; no separate mark (UNVERIFIED).</td><td>Oracle.</td><td>Premium sampled each minute, hourly mean, F = P/8 + interest. Paid hourly. 8 h cap = 600% &times; (IMF &minus; MMF). Pays at oracle price.</td><td>5.0 bps taker / 1.0 bps maker at tier 1.</td></tr>
+  <tr><td>Hyperliquid</td><td>Weighted median of CEX prices, ~3 s.</td><td>Median(oracle+EMA150s, median(bid,ask,last), weighted CEX perp mids).</td><td>Hourly, 5 s premium samples, 1/8 of the rate, cap 0.5% per hour. Pays at oracle price.</td><td>0.045% / 0.015% base. No liquidation fee; liquidator vault instead of an insurance fund.</td></tr>
+  </tbody></table></div>
+  <h3>What this means for our rules</h3>
+  <ul class="check">
+    <li>Funding in the market is universally a <strong>premium index plus a clamped interest term</strong>, settled on an 8 h grid or shorter. Our phase 1 leg difference is not an industry formula; it is chosen because no book exists yet and because it equals the maker's hedge carry. Phase 2 moves to the standard formula.</li>
+    <li>Mark is universally <strong>index plus a smoothed basis</strong>, usually a median of three. A pure ratio is a deliberate phase 1 simplification.</li>
+    <li>Mark, not index, is the price used for the funding payment on most venues (Binance, OKX, Bybit, Bitget, Gate). dYdX and Hyperliquid use the oracle. We keep mark.</li>
+    <li>Fee currency follows the margin coin on coin-margined contracts. No venue lists an XRP-quoted perpetual, so every XRP-specific value (cap, margin rate, fee level) is our own risk decision.</li>
+    <li>Dynamic funding intervals (1 h to 8 h) exist on Binance, OKX, Bybit and Gate to limit shocks. Worth adding in phase 2.</li>
+  </ul>
+</section>
+<nav class="pager"><a href="#price">&larr;<span class="no">05</span>Price &amp; funding</a><a href="#venues"><span class="no">05b</span>External market data &rarr;</a></nav>
 </article>
 
 <!-- 05b venues -->
@@ -446,7 +612,7 @@ funding(BTCXRP) = funding(BTCUSDT) - funding(XRPUSDT)</pre>
   </tbody></table></div>
   <p class="small">Source: Binance <code>/fapi/v1/exchangeInfo</code>, <code>/fapi/v1/constituents</code>, <code>/fapi/v1/fundingInfo</code>, <code>/fapi/v1/premiumIndex</code> and <code>/fapi/v1/ticker/24hr</code>, read on 2026-11-18.</p>
 </section>
-<nav class="pager"><a href="#price">&larr;<span class="no">05</span>Price &amp; funding</a><a href="#funds"><span class="no">06</span>Collateral &amp; USD values &rarr;</a></nav>
+<nav class="pager"><a href="#rules">&larr;<span class="no">05a</span>Market rulebook</a><a href="#funds"><span class="no">06</span>Collateral &amp; USD values &rarr;</a></nav>
 </article>
 
 <!-- 06 funds -->

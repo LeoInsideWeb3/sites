@@ -190,6 +190,7 @@ td.dim{color:var(--ink-2)}
     <a href="#today"><span class="no">03</span>代码现状</a>
     <a href="#margin"><span class="no">04</span>保证金模型</a>
     <a href="#price"><span class="no">05</span>价格与资金费</a>
+    <a href="#rules"><span class="no">05a</span>市场规则手册</a>
     <a href="#venues"><span class="no">05b</span>外部行情数据</a>
     <a href="#funds"><span class="no">06</span>保证金划转与 USD 口径</a>
     <a href="#risk"><span class="no">07</span>风控与上线</a>
@@ -197,7 +198,7 @@ td.dim{color:var(--ink-2)}
     <a href="#work"><span class="no">09</span>开发拆分与测试</a>
   </nav>
   <a class="lang" href="xrp-quoted-perps-investigation.en.html" hreflang="en" onclick="this.href=this.href.split('#')[0]+location.hash">English</a>
-  <div class="foot">2026-11-18 · 草稿 v2<br>状态：待评审<br>尚未写任何代码</div>
+  <div class="foot">2026-11-19 · 草稿 v3<br>状态：待评审<br>尚未写任何代码</div>
 </aside>
 
 <div class="main">
@@ -394,7 +395,172 @@ funding(BTCXRP) = funding(BTCUSDT) - funding(XRPUSDT)</pre>
     <li>给内存中的资金费快照加新鲜度检查。目前行情中断的市场会一直按最后一个费率结算（<code>funding_rate/types.go:73-82</code>）。</li>
   </ul>
 </section>
-<nav class="pager"><a href="#margin">&larr;<span class="no">04</span>保证金模型</a><a href="#venues"><span class="no">05b</span>外部行情数据 &rarr;</a></nav>
+<nav class="pager"><a href="#margin">&larr;<span class="no">04</span>保证金模型</a><a href="#rules"><span class="no">05a</span>市场规则手册 &rarr;</a></nav>
+</article>
+
+<!-- 05a rulebook -->
+<article class="panel" id="p-rules">
+<header>
+  <p class="eyebrow">规格</p>
+  <h1>市场规则手册：指数价、标记价、资金费、手续费</h1>
+  <p class="lede">评审可以逐条核对的具体规则。<span class="tag keep">现有</span> 表示 USDT 永续今天的做法（已在代码中核实）；<span class="tag stop">新增</span> 表示 XRP 市场要新做的部分；<strong>TODO</strong> 表示上线前需要风控拍板的数值。示例中的数字仅为演示。</p>
+</header>
+
+<section>
+  <h2>1. 参数表</h2>
+  <div class="tw"><table class="prtable"><thead><tr><th>参数</th><th>BTCXRP-PERP / ETHXRP-PERP</th><th>说明</th></tr></thead><tbody>
+  <tr><td>标的 / 计价 / 保证金币种</td><td>BTC（ETH）/ XRP / XRP</td><td>定义 A：盈亏、手续费、资金费全部以 XRP 计。</td></tr>
+  <tr><td>合约类型</td><td>相对计价币种的线性合约</td><td>数量以标的币计，价格单位为每个标的币多少 XRP。名义价值（XRP）= 数量 &times; 价格。多头盈亏（XRP）= 数量 &times;（平仓价 &minus; 开仓价）。</td></tr>
+  <tr><td>执行账本</td><td><code>B_BOOK</code></td><td>对手方是盘口上的挂单方，深度由自有做市商提供。</td></tr>
+  <tr><td>保证金模式</td><td>第一期只开逐仓</td><td>见第 04 节。</td></tr>
+  <tr><td>最大杠杆</td><td>10 倍</td><td>Binance ETHBTC 为 20 倍，BTC/XRP 波动更大。TODO 风控确认。</td></tr>
+  <tr><td>维持保证金率</td><td>TODO，高于同标的 USDT 市场</td><td>Binance ETHBTC 第一档为 2.5%。</td></tr>
+  <tr><td>资金费周期</td><td>28800 秒（8 小时）</td><td><code>funding_interval_seconds</code> 默认值。结算时刻按 UTC 零点和周期对齐：00:00、08:00、16:00（<code>settlement_time.go</code>）。</td></tr>
+  <tr><td>单周期资金费上限</td><td>&plusmn;0.675%（TODO）</td><td>取两条腿上限之和（BTCUSDT 0.30% + XRPUSDT 0.375%），避免上限截断合理的差值。代码默认值为 0.3%。</td></tr>
+  <tr><td>利息项</td><td>无</td><td>市场表里有 <code>interest_rate_per_interval</code> 字段，但代码里没人读取，所以不加利息。</td></tr>
+  <tr><td>下单价格带</td><td>标记价 0.9 倍到 1.1 倍</td><td>现有默认值（<code>price_min_ratio</code>、<code>price_max_ratio</code>），与 Binance ETHBTC 相同。</td></tr>
+  <tr><td>Maker / Taker 费率</td><td>与同标的 USDT 市场相同的 bps，以 XRP 收取</td><td>见第 5 节。</td></tr>
+  <tr><td>强平费</td><td>被强平名义价值的 2.0%（TODO）</td><td><code>liquidation_fee_rate</code>。Binance ETHBTC 为 2.0%。</td></tr>
+  <tr><td>Tick、步长、最小数量、最小名义价值</td><td>TODO，以 XRP 为单位</td><td>默认 <code>min_notional=1</code> 会变成 1 XRP，必须显式设置。</td></tr>
+  </tbody></table></div>
+</section>
+
+<section>
+  <h2>2. 指数价</h2>
+  <p>指数价是这个交易对的参考现货价。它不用于盈亏和强平（用标记价），只用于展示、标记价与指数价的偏离检查，以及将来的基差项。</p>
+  <h3>现状 <span class="tag keep">现有</span></h3>
+  <p>USDT 市场的指数价是直接转发 Binance 自己的多交易所指数（<code>binance_perp/types.go</code> 里的 <code>IndexPrice</code>，字段 <code>i</code>），放在 <code>EventQuoteObserved</code> 的附加数据里。我们的加权标记价聚合器并不计算指数价。</p>
+  <h3>XRP 市场的规则 <span class="tag stop">新增</span></h3>
+<pre><span class="c"># 任一条腿的指数价变化时重新计算</span>
+index(BTCXRP) = index(BTCUSDT) / index(XRPUSDT)
+index(ETHXRP) = index(ETHUSDT) / index(XRPUSDT)
+<span class="c"># 按市场价格精度取整，沿用发布端现有的取整方式</span></pre>
+  <ul class="gate">
+    <li><span class="tag stop">不更新</span>任一条腿的指数价缺失、为 0，或超过 <strong>2 秒</strong>没更新（TODO）：保留上一次的派生指数价，绝不用一新一旧两条腿去算。</li>
+    <li><span class="tag stop">过期</span>派生指数价超过 <strong>10 秒</strong>没更新（TODO）：市场进入 SAFE_MODE（与 <code>safe_mode_zero_sources_sec</code> 同一触发时间）。</li>
+    <li><span class="tag a">输出</span>与其他市场的指数价使用同一事件和主题发布，下游无需改动。</li>
+  </ul>
+  <p>行业做法（第 6 节）：用 3 到 6 个现货交易所；偏离中位数超过 3% 到 5% 的源被截断或剔除（Binance 对 BTC、ETH、XRP 用 1%）；3 到 15 分钟没更新的源被剔除；没有直接市场的交易对接受合成交叉价。我们的两条腿通过 Binance 的指数已经遵循这些规则。</p>
+  <p>两个综合指数相除，会继承各自的异常值过滤。Binance 自己的 ETHBTC 指数也是同样思路：合成交叉价 <code>ETHUSDT/BTCUSDT</code> 是其成分之一（05b）。</p>
+</section>
+
+<section>
+  <h2>3. 标记价</h2>
+  <p>标记价驱动未实现盈亏、保证金、强平和资金费名义价值，从来不是最新成交价。</p>
+  <h3>现状 <span class="tag keep">现有</span></h3>
+  <p>每个 USDT 市场是各交易所标记价的加权聚合（例如 BTCUSDT-PERP：Binance 50%、OKX 30%、Bybit 15%、内部成交 5%），窗口 200 ms。模式有 NORMAL、DEGRADED（两个源时按 <code>0.7 &times; 原始值 + 0.3 &times; 锚点</code> 混合）和 SAFE_MODE（价格冻结）。某个源 10 秒没数据或偏离 5% 就下线。详见 <code>configs/nacos/quote.yaml</code>。</p>
+  <h3>XRP 市场的规则 <span class="tag stop">新增</span>，第一期</h3>
+<pre>mark(BTCXRP) = mark(BTCUSDT) / mark(XRPUSDT)    <span class="c"># 每条腿取该市场聚合器的输出</span></pre>
+  <p>第一期 XRP 市场自己的内部成交不参与标记价，避免薄盘口拉动标记价。两条腿的值已经包含上面说的 200 ms 窗口和异常值处理。</p>
+  <h3>派生标记价的质量状态</h3>
+  <div class="tw"><table class="prtable"><thead><tr><th>腿 A 状态</th><th>腿 B 状态</th><th>派生状态</th><th>价格</th><th>是否允许开新仓</th></tr></thead><tbody>
+  <tr><td>NORMAL</td><td>NORMAL</td><td>NORMAL</td><td>A / B</td><td>允许</td></tr>
+  <tr><td>DEGRADED</td><td>任意非 SAFE</td><td>DEGRADED</td><td>A / B（每条腿已混合过）</td><td>两条腿都允许才允许</td></tr>
+  <tr><td>SAFE_MODE</td><td>任意</td><td>SAFE_MODE</td><td><strong>冻结在最后一次 NORMAL 的派生标记价。</strong>不用冻结的腿重新相除，否则另一条腿一动就会漂移。</td><td>禁止</td></tr>
+  <tr><td>超过 2 秒无更新</td><td>任意</td><td>DEGRADED，10 秒后 SAFE_MODE</td><td>最后一次派生值</td><td>禁止</td></tr>
+  </tbody></table></div>
+  <p><strong>恢复。</strong>两条腿连续 NORMAL 满现有的 10 秒预热期（<code>recovery_warmup_sec</code>），然后按其他市场同样的自动解除规则清除冻结。</p>
+  <h3>保护检查 <span class="tag stop">新增</span></h3>
+  <ul class="check">
+    <li>|标记价 &minus; 指数价| / 指数价超过 <strong>2%</strong>（TODO）：告警并禁止开新仓。两者出自同样两条腿，正常不会触发，用来发现某条腿出错。</li>
+    <li>与 Binance XRPBTC 或 XRPETH 现货中间价的倒数相差超过 <strong>1%</strong>：告警并禁止开新仓。只做交叉验证，不参与定价（05b）。</li>
+  </ul>
+  <h3>第二期：加入基差项（所有主流交易所都有）</h3>
+  <p>纯比值忽略了我们自己的盘口。Binance、Bybit、Bitget、Gate、Hyperliquid 都取<strong>三者中位数</strong>：（1）指数 &times;（1 + 上一期资金费率 &times; 距下次结算时间 / 周期），（2）指数 + 盘口中间价与指数之差的移动平均，（3）最新成交价。OKX、Deribit、Kraken 用指数加（中间价 &minus; 指数）的 EMA。基差窗口：Binance、Bitget、Kraken 为 30 秒，Bybit 为 2.5 分钟，Gate 为 5 分钟，Hyperliquid 为 150 秒。第二期采用三者中位数加 30 秒基差，前提是 XRP 盘口有稳定深度，做市商报价已验证。在此之前，薄盘口不能拉动标记价。</p>
+  <div class="note"><h4>算例（演示）</h4><p>mark(BTCUSDT) = 90,000，mark(XRPUSDT) = 2.00，得到 mark(BTCXRP) = 45,000 XRP/BTC。在 45,000 开 0.1 BTC 多单，名义价值 4,500 XRP。标记价涨到 46,000，未实现盈亏 = 0.1 &times; 1,000 = +100 XRP。</p></div>
+</section>
+
+<section>
+  <h2>4. 资金费率</h2>
+  <h3>费率计算 <span class="tag stop">新增</span></h3>
+<pre><span class="c"># 每次更新；T = 28800 秒</span>
+f_B' = f(BTCUSDT) &times; T / T_BTCUSDT          <span class="c"># 把腿的周期归一到 T</span>
+f_X' = f(XRPUSDT) &times; T / T_XRPUSDT
+raw  = f_B' &minus; f_X'
+rate = clamp(raw, &minus;cap, +cap)             <span class="c"># cap = max_funding_rate_per_int</span></pre>
+  <p>放在派生 <code>EventQuoteObserved</code> 的资金费附加数据里下发，PM Perp 的接收和校验不变。</p>
+  <div class="tw"><table class="prtable"><thead><tr><th>BTCUSDT 费率</th><th>XRPUSDT 费率</th><th>BTCXRP 费率</th><th>谁付钱</th></tr></thead><tbody>
+  <tr><td>+0.010%</td><td>+0.010%</td><td>0.000%</td><td>无人</td></tr>
+  <tr><td>+0.030%</td><td>+0.010%</td><td>+0.020%</td><td>多头付空头</td></tr>
+  <tr><td>+0.010%</td><td>+0.040%</td><td>&minus;0.030%</td><td>空头付多头</td></tr>
+  </tbody></table></div>
+  <ul class="gate">
+    <li><span class="tag stop">跳过</span>结算时任一条腿的费率超过 <strong>60 秒</strong>没更新（TODO）：该市场本周期跳过并告警，不使用过期费率收费。运维有补录工具（<code>funding_rate/backfill.go</code>），是否支持派生市场需确认。</li>
+    <li><span class="tag a">改动</span>现在某个市场行情中断后，会一直用最后一次费率结算（<code>funding_rate/types.go:73-82</code>）。新鲜度检查对所有市场生效。</li>
+  </ul>
+  <h3>结算 <span class="tag keep">现有</span></h3>
+<pre>payment_XRP = 持仓数量 &times; 结算时标记价 &times; 费率
+费率 &gt; 0：多头付，空头收
+费率 &lt; 0：空头付，多头收</pre>
+  <ul class="check">
+    <li>每个对齐时刻对所有持仓执行。因强平被锁定的仓位跳过（<code>executor.go:119-125</code>）。</li>
+    <li>B-Book 市场资金在持仓人之间流转，不涉及平台账户（<code>executor.go:206-228</code>）。撮合账本上多空持仓量总是相等，所以多头总付出等于空头总收入。</li>
+    <li>每笔支付记录为以计价币种计的 <code>EventPerpetualFundingPaymentRecord</code>。</li>
+  </ul>
+  <h3>第二期：标准溢价指数公式 <span class="tag a">计划</span></h3>
+  <p>Binance、OKX、Bybit、Bitget、Gate、BitMEX、dYdX、Hyperliquid 都用它，只有参数略有不同（第 6 节）：</p>
+<pre>P_t = [max(0, 冲击买价 &minus; 指数) &minus; max(0, 指数 &minus; 冲击卖价)] / 指数
+      <span class="c"># 冲击价 = 在我们盘口上成交"冲击名义价值"所需的价格</span>
+      <span class="c"># 冲击名义价值 = 200 USDT / 初始保证金率，按 mark(XRPUSDT) 折成 XRP</span>
+avgP = P_t 的加权平均，每 5 秒采样一次，权重 1..n（越新权重越大）
+F    = clamp( avgP + clamp(I &minus; avgP, &minus;0.05%, +0.05%), &minus;cap, +cap )
+I    = 交叉市场取 0（Binance ETHBTC 取 0）；USDT 市场为每 8 小时 0.01%</pre>
+  <p>它需要连续的双边盘口，否则冲击价无定义，P 会变成 0。它还会让资金费把盘口价格拉向标记价。可以与两腿差值（持仓成本部分）叠加，即 <code>F = 持仓成本 + 溢价项</code>，两者的占比由风控决定（TODO）。</p>
+  <h3>动态周期</h3>
+  <p>Binance、OKX、Bybit、Gate 在费率触及上限时把周期缩短到 1、2 或 4 小时，稳定若干周期后恢复（Binance：连续 16 个周期不超过 0.025%）。第一期 XRP 市场固定 8 小时。如果某条腿切换了周期，上面的归一化保证差值仍然正确。动态周期放到第二期。</p>
+  <div class="note"><h4>这里资金费不做什么</h4><p>费率没有溢价项，所以资金费不会把盘口价格拉向标记价。价格回归靠做市商的对冲。如果盘口偏离标记价，只有做市商套利能把差距收回来。第二期可能加入溢价指数项。</p></div>
+  <div class="note"><h4>算例（演示）</h4><p>费率 +0.020%，多头 0.1 BTC，标记价 45,000：支付 = 0.1 &times; 45,000 &times; 0.0002 = 0.9 XRP，由多头付给空头。</p></div>
+</section>
+
+<section>
+  <h2>5. 交易手续费</h2>
+  <h3>计算方式 <span class="tag keep">现有</span></h3>
+<pre>fee = 数量 &times; 价格 &times; 费率
+费率 = 挂单（maker）费率 或 吃单（taker）费率</pre>
+  <p>费率来自 fee engine：按账户成交量分档，市场可单独覆盖（<code>CalculateTradingFee</code>，<code>perpetuals_service.go:3845-3878</code>）。配置默认 maker 0.02%、taker 0.06%，fee-engine 的永续档位 taker 从 3.5 bps 起，随成交量下降。手续费以市场的计价币种计算，XRP 市场里本来就是 XRP。</p>
+  <h3>XRP 市场的规则 <span class="tag stop">新增</span></h3>
+  <ul class="check">
+    <li><strong>费率水平。</strong>与同标的 USDT 市场使用同一套 bps 阶梯，用户看到的是同一张费率表。手续费从逐仓的 XRP 保证金里扣除。</li>
+    <li><strong>下单时预留。</strong>下单时锁定初始保证金加按名义价值计算的 taker 手续费，都以 XRP 计。</li>
+    <li><strong>用于分档和活动的成交量。</strong>USD 成交量 = XRP 名义价值 &times; 成交时的 mark(XRPUSDT)。现在 <code>TradeVolumeUSDT</code> 直接取计价币种名义值，会把 XRP 的成交量低估为实际的 1/XRP 价格（第 06 节）。</li>
+    <li><strong>手续费的 USD 价值。</strong>fee_XRP &times; mark(XRPUSDT)。现在 XRP 的这个值会算成 0（第 06 节）。</li>
+    <li><strong>返佣和推荐奖励。</strong>TODO：以 XRP 发放，还是通过 XRPUSDT 现货换成 USDT。后者需要 XRPUSDT 现货市场已上线。</li>
+    <li><strong>强平费。</strong><code>liquidation_fee_rate</code> &times; 被强平名义价值，以 XRP 计，进入该标的对应的保险池。TODO：实现前在强平代码里确认具体路径。各家做法不同：Binance 收清算费进保险基金，OKX 按 taker 费率收，Bybit 和 Hyperliquid 不收（第 6 节）。</li>
+    <li><strong>手续费币种的先例。</strong>Binance COIN-M 和 OKX 币本位合约都用保证金币种收手续费，与 XRP 收费形态一致。</li>
+    <li>资金费支付不收手续费。</li>
+  </ul>
+  <div class="note"><h4>算例（演示）</h4><p>taker 在 45,000 买入 0.1 BTC，10 倍杠杆。名义价值 4,500 XRP；初始保证金 450 XRP；6 bps 的 taker 手续费 = 2.7 XRP；若是 2 bps 的 maker 则为 0.9 XRP。XRPUSDT 为 2.00 时，这笔 taker 手续费价值 5.4 美元，成交量计 9,000 美元。</p></div>
+  <h3>强平价（逐仓，近似，不含手续费）</h3>
+<pre>多头强平价 &asymp; 开仓价 &times; (1 &minus; 1/杠杆 + MMR)
+空头强平价 &asymp; 开仓价 &times; (1 + 1/杠杆 &minus; MMR)</pre>
+</section>
+
+<section>
+  <h2>6. 其他交易所怎么做</h2>
+  <p>数据来自 2026-11-19 阅读的官方页面。<strong>未核实</strong>表示官方页面打不开或没有写明，数值来自搜索摘要或第三方。</p>
+  <div class="tw"><table class="prtable"><thead><tr><th>交易所</th><th>指数价</th><th>标记价</th><th>资金费</th><th>手续费</th></tr></thead><tbody>
+  <tr><td>Binance USD-M</td><td>多交易所加权。偏离中位数超过 3% 的源被截断（BTC、ETH、BNB、SOL、XRP 用 1%）。5 分钟没更新权重归 0。没有直接市场的用合成交叉价。</td><td>中位数（指数&times;(1+费率&times;t/T)，指数+30 秒基差均值，最新价）</td><td>冲击价溢价，5 秒采样，权重 1..n。F = avgP + clamp(I&minus;avgP, &plusmn;0.05%)。I 为每 8 小时 0.01%（ETHBTC 为 0）。上限主流币为 &plusmn;0.75&times;维持保证金率，其他 &plusmn;2%。8 小时周期，00/08/16 UTC；触顶后缩短到 1 小时，连续 16 个周期平稳后恢复 4 小时。支付 = 标记价 &times; 数量 &times; F。</td><td>名义价值 &times; 费率。USD-M 收 USDT，COIN-M 收标的币。示例 0.02% / 0.05%。强平清算费进保险基金。</td></tr>
+  <tr><td>OKX</td><td>多源加权；两个源时等权；异常源被拉向中位数（阈值未核实）。</td><td>指数 + （中间价 &minus; 指数）的移动平均。窗口未核实。</td><td>形式同 Binance，1 分钟采样，I 为每 8 小时 0.01%，周期 1/2/4/8 小时，触顶后下调，之后 12 小时内都在 &plusmn;0.20% 内才恢复。支付 = 价值 &times; 费率，按标记价。</td><td>名义价值 &times; 费率，USDT 或币本位用币收。费率未核实。强平按 taker 费率。</td></tr>
+  <tr><td>Bybit</td><td>成交量前 6 的现货对，权重按 24 小时成交量，每小时更新。偏离中位数超过 5% 剔除（BTC、ETH 为 1%）。15 分钟无成交剔除。</td><td>中位数（指数&times;(1+费率&times;t/8)，指数+2.5 分钟基差均值，最新价）。现货异常时退回最新成交价。</td><td>8 小时，00/08/16 UTC，触顶改为每小时。公式未核实（搜索摘要：溢价 + clamp，I = 0.01%）。</td><td>按名义价值。0.02% / 0.055%（未核实）。不收强平费，按合约类型分设保险基金。</td></tr>
+  <tr><td>Bitget</td><td>最多 6 个交易所，200 ms 更新。偏离中位数超过 5% 剔除，低于 2% 重新纳入。指数波动超过 0.1% 时做平滑。</td><td>中位数（最新价，指数&times;(1+费率&times;t)，指数+30 秒基差均值）。各页面对窗口说法不一。</td><td>Binance 式，5 秒采样，每周期 5,760 个，上限 &plusmn;0.75&times;维持保证金率，8 小时，部分合约 2 或 4 小时。</td><td>按档位 0.02% 到 0.06%。币种未写明。</td></tr>
+  <tr><td>Gate</td><td>未读取（未核实）。</td><td>中位数（指数&times;(1+费率&times;t/T)，指数+5 分钟基差均值，最新价）。限制在指数 &times; (1 &plusmn; 最大偏离) 内。</td><td>60 秒采样，线性权重，I = 基准/3，加密币基准为 0.03%，上限按合约设置。8 小时或 4 小时；触顶后 1 小时，连续 16 次结算平稳后恢复。</td><td>未核实。</td></tr>
+  <tr><td>Kraken Futures</td><td>未核实。</td><td>指数 + 30 秒 EMA（冲击中间价 &minus; 指数），溢价封顶 1%。</td><td>每小时结算，每小时 60 个样本，取中间 30 个平均，除以 8，限幅每小时 &plusmn;0.5%。支付 = 合约数 &times; 费率 &times; 持有时间。</td><td>未核实（搜索：0.02% / 0.05%）。多币种保证金，以 USD 计。</td></tr>
+  <tr><td>Coinbase Intl</td><td>未核实。</td><td>中位数（买一、卖一、最新价）（搜索摘要）。</td><td>每小时。溢价/24，TWAP 平滑（搜索摘要）。</td><td>档位从 &minus;0.005% maker / 0.015% taker 起（流动性计划页面）。</td></tr>
+  <tr><td>BitMEX</td><td>未核实。有 .BETHXBT 指数。</td><td>指数 &times; (1 + 费率 &times; t/T)（官方文章）。</td><td>溢价 + clamp(I&minus;P, &plusmn;0.05%)，8 小时 TWAP，04/12/20 UTC（搜索摘要）。</td><td>未核实。</td></tr>
+  <tr><td>Deribit</td><td>Coinbase、Kraken、LMAX 的中间价；偏离中位数 &plusmn;0.5% 以外截断（2019 年文章）。</td><td>指数 + EMA（受限的中间价 &minus; 指数）（搜索摘要）。</td><td>溢价死区 &plusmn;0.025%，每 8 小时上限 BTC &plusmn;0.5%、ETH &plusmn;1%，连续累计，反向合约用币支付。</td><td>基础 0% / 0.05%（第三方）。强平费 1%（第三方）。</td></tr>
+  <tr><td>dYdX v4</td><td>只有预言机价，没有单独的标记价（未核实）。</td><td>预言机价。</td><td>每分钟采样溢价，取小时均值，F = P/8 + 利息。每小时结算。8 小时上限 = 600% &times; (IMF &minus; MMF)。按预言机价支付。</td><td>一档 taker 5.0 bps / maker 1.0 bps。</td></tr>
+  <tr><td>Hyperliquid</td><td>CEX 价格的加权中位数，约 3 秒一次。</td><td>中位数（预言机+150 秒 EMA，（买一、卖一、最新价）中位数，CEX 永续中间价加权中位数）。</td><td>每小时，5 秒溢价采样，取 1/8，每小时上限 0.5%。按预言机价支付。</td><td>基础 0.045% / 0.015%。不收强平费；用清算人金库代替保险基金。</td></tr>
+  </tbody></table></div>
+  <h3>对我们规则的启示</h3>
+  <ul class="check">
+    <li>市场上的资金费几乎都是<strong>溢价指数加一个被限幅的利息项</strong>，按 8 小时或更短的网格结算。我们第一期的两腿差值不是行业公式；选它是因为还没有盘口，并且它正好等于做市商对冲的持仓成本。第二期改用标准公式。</li>
+    <li>标记价几乎都是<strong>指数加平滑后的基差</strong>，通常取三者中位数。纯比值是第一期有意的简化。</li>
+    <li>多数交易所（Binance、OKX、Bybit、Bitget、Gate）资金费支付用标记价而不是指数价，dYdX 和 Hyperliquid 用预言机价。我们保持用标记价。</li>
+    <li>币本位合约的手续费币种跟随保证金币种。没有任何交易所上线 XRP 计价永续，所以每个 XRP 专属的数值（上限、保证金率、费率水平）都是我们自己的风控决定。</li>
+    <li>Binance、OKX、Bybit、Gate 有动态资金费周期（1 小时到 8 小时）来限制冲击，值得第二期加入。</li>
+  </ul>
+</section>
+<nav class="pager"><a href="#price">&larr;<span class="no">05</span>价格与资金费</a><a href="#venues"><span class="no">05b</span>外部行情数据 &rarr;</a></nav>
 </article>
 
 <!-- 05b venues -->
@@ -446,7 +612,7 @@ funding(BTCXRP) = funding(BTCUSDT) - funding(XRPUSDT)</pre>
   </tbody></table></div>
   <p class="small">来源：Binance <code>/fapi/v1/exchangeInfo</code>、<code>/fapi/v1/constituents</code>、<code>/fapi/v1/fundingInfo</code>、<code>/fapi/v1/premiumIndex</code>、<code>/fapi/v1/ticker/24hr</code>，读取于 2026-11-18。</p>
 </section>
-<nav class="pager"><a href="#price">&larr;<span class="no">05</span>价格与资金费</a><a href="#funds"><span class="no">06</span>保证金划转与 USD 口径 &rarr;</a></nav>
+<nav class="pager"><a href="#rules">&larr;<span class="no">05a</span>市场规则手册</a><a href="#funds"><span class="no">06</span>保证金划转与 USD 口径 &rarr;</a></nav>
 </article>
 
 <!-- 06 funds -->
