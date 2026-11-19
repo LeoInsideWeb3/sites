@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeoDAX · 如何让 PR 保持小而可评审</title>
+<style>
+.copy{position:relative}
+
+/* spec — long-form design proposal. Three columns on wide screens:
+   sticky TOC | reading column | margin column. Wide tables break out of the text
+   column. Revisions are first-class: ins/del marks, per-section "Updated" pills,
+   margin change notes, a changelog banner and a "since you last read" memory. */
+:root{
+  --bg:#FBFAF7; --card:#fff; --ink:#16181D; --ink2:#4A4D55; --ink3:#8A8C92;
+  --hair:#E4E2DB; --hair2:#EFEDE7; --chip:#F0EEE8; --accent:#1F2A44;
+  --amber:#97690A; --amber-bg:#FBF1DC;
+  --ins:#E3F1E8; --ins-b:#2E7D4F; --del:#F8E3E0; --del-b:#C0392B;
+  --new:#EEE9FB; --new-b:#6A3FB5;
+  --serif:"Noto Serif SC","Songti SC","Source Han Serif SC",Georgia,serif;
+  --sans:Inter,"PingFang SC","Noto Sans SC","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 var(--sans)}
+code{font:.86em var(--mono);background:var(--chip);padding:1px 6px;border-radius:3px}
+a{color:var(--accent)}
+/* top bar + changelog banner */
+.bar{position:sticky;top:0;z-index:20;background:rgba(251,250,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar .in{max-width:1560px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:18px}
+.logo{font:600 22px var(--serif)}
+.crumb{padding-left:18px;border-left:1px solid var(--hair);color:var(--ink2);font-size:14px}
+.sp{flex:1}
+.pill{font:600 12px var(--sans);padding:2px 10px;border-radius:99px;background:var(--amber-bg);color:var(--amber);border:1px solid #EBD6A6}
+.lang{font-size:14px;color:var(--ink2);text-decoration:none;border:1px solid var(--hair);border-radius:4px;padding:3px 12px;background:var(--card)}
+.banner{background:var(--amber-bg);border-bottom:1px solid #EBD6A6}
+.banner .in{max-width:1560px;margin:0 auto;padding:12px 32px;display:flex;gap:22px;align-items:center;flex-wrap:wrap;font-size:14px}
+.banner b{font-weight:700}
+.tog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink2);user-select:none}
+.tog input{accent-color:var(--accent)}
+.btn{border:1px solid #D9C48F;background:#fff;border-radius:4px;padding:3px 12px;font:13px var(--sans);cursor:pointer;color:var(--ink)}
+.chg-list{display:none;max-width:1560px;margin:0 auto;padding:0 32px 14px}
+.chg-list.open{display:block}
+.chg-list table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #EBD6A6}
+.chg-list th,.chg-list td{padding:6px 12px;border-bottom:1px solid var(--hair2);text-align:left}
+.chg-list th{background:#FFF8E8;font-weight:600}
+/* shell */
+.shell{max-width:1560px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.toc{position:sticky;top:112px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding:28px 0}
+.toc .k{font-size:12px;letter-spacing:.08em;color:var(--ink3);margin-bottom:10px}
+.toc a.c,.toc a.s{display:flex;justify-content:space-between;gap:8px;align-items:center;text-decoration:none;color:var(--ink2);font-size:14px;line-height:1.5;padding:6px 10px 6px 12px;border-left:2px solid var(--hair)}
+.toc a:hover{color:var(--ink);background:var(--hair2)}
+.toc a.on,.toc .g.open>a.c{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--card)}
+.toc a .no{font:12px var(--mono);color:var(--ink3);margin-right:8px}
+.toc .b{font:700 10px var(--sans);padding:1px 6px;border-radius:99px;background:var(--ins);color:var(--ins-b);flex-shrink:0}
+.toc .b.new{background:var(--new);color:var(--new-b)}
+body.only-changed .toc a:not([data-ch]){display:none}
+/* article */
+.hero{padding:44px 0 26px;border-bottom:2px solid var(--ink)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.14em;color:var(--amber)}
+.hero h1{margin:8px 0 8px;font:500 40px/1.25 var(--serif);letter-spacing:.3px}
+.hero p{margin:0;max-width:760px;color:var(--ink2);font-size:17px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.chip{background:var(--chip);border:1px solid var(--hair);border-radius:3px;padding:2px 11px;font:13px var(--mono);color:var(--ink2)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:36px;margin:28px 0 8px}
+.kpi{border-top:2px solid var(--ink);padding-top:12px}
+.kpi .k{font-size:13px;color:var(--ink2)} .kpi .v{font:500 34px/1.4 var(--serif)} .kpi .v small{font:14px var(--serif);color:var(--ink2);margin-left:4px}
+/* section = reading column + margin column; .wide spans both */
+.chapter{position:relative;padding:44px 0 20px;border-bottom:1px solid var(--hair)}
+.chap-h{margin-bottom:6px;max-width:900px}
+.chap-h .eyebrow{font:600 12px var(--sans);letter-spacing:.12em;color:var(--amber);text-transform:uppercase}
+.chap-h h1{margin:6px 0 10px;font:500 34px/1.3 var(--serif)}
+.chap-h h1 .no{font:16px var(--mono);color:var(--ink3);margin-right:14px}
+.chap-h .lede{margin:0 0 6px}
+.sec{display:grid;grid-template-columns:minmax(0,720px) minmax(240px,1fr);column-gap:48px;padding:6px 0 4px;position:relative}
+.sec>.main{grid-column:1}
+.sec>.margin{grid-column:2;padding-top:6px}
+.sec>.wide{grid-column:1/-1;margin:8px 0 8px;overflow-x:auto;background:var(--card);border:1px solid var(--hair);border-radius:6px}
+.sec h2{margin:26px 0 8px;font:500 23px/1.4 var(--serif)}
+.sec h2 .no{font:15px var(--mono);color:var(--ink3);margin-right:12px}
+.sec h3{margin:26px 0 6px;font:600 16px var(--sans)}
+.sec p{margin:0 0 14px}
+.lede{font-size:17px;color:var(--ink2)}
+pre{background:#16181F;color:#E8E6DF;border-radius:6px;padding:14px 18px;overflow:auto;font:13px/1.8 var(--mono);margin:12px 0 16px}
+pre .c{color:#8A8C92}
+/* margin notes */
+.mn{font-size:13px;line-height:1.65;color:var(--ink2);border-left:2px solid var(--hair);padding:2px 0 2px 14px;margin:0 0 18px}
+.mn b.lb{display:block;font-size:11px;letter-spacing:.08em;color:var(--ink3);margin-bottom:2px}
+.mn.chg{border-left-color:var(--ins-b);background:linear-gradient(90deg,#F2F9F5,transparent)}
+.mn.chg b.lb{color:var(--ins-b)}
+.mn.todo{border-left-color:var(--amber)} .mn.todo b.lb{color:var(--amber)}
+/* revision markup */
+.pillrev{display:inline-block;vertical-align:middle;margin-left:14px;font:700 11px var(--sans);letter-spacing:.04em;padding:2px 9px;border-radius:99px;background:var(--ins);color:var(--ins-b)}
+.pillrev.new{background:var(--new);color:var(--new-b)}
+.chapter.upd::before{content:"";position:absolute;left:-18px;top:48px;bottom:28px;width:3px;border-radius:3px;background:var(--ins-b);opacity:0}
+.chapter.upd.fresh::before{opacity:1}
+.chapter.upd.fresh.isnew::before{background:var(--new-b)}
+body:not(.show-changes) .pillrev,body:not(.show-changes) .chapter.upd::before{display:none}
+ins{text-decoration:none;background:var(--ins);border-bottom:2px solid var(--ins-b);padding:0 2px}
+del{background:var(--del);color:var(--del-b);text-decoration:line-through;padding:0 2px}
+body:not(.show-changes) ins{background:none;border-bottom:0}
+body:not(.show-changes) del{display:none}
+body.hide-del del{display:none}
+body.only-changed .chapter:not(.upd){display:none}
+/* tables */
+table.t{width:100%;border-collapse:collapse;font-size:14px;line-height:1.6}
+table.t th{position:sticky;top:0;background:#FAF9F5;text-align:left;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--ink);white-space:nowrap}
+table.t td{padding:10px 14px;border-bottom:1px solid var(--hair2);vertical-align:top;min-width:160px}
+table.t td:first-child,table.t th:first-child{position:sticky;left:0;background:#fff;font-weight:600;min-width:130px;border-right:1px solid var(--hair2);z-index:1}
+table.t tr:hover td{background:#FDFCF8} table.t tr:hover td:first-child{background:#FDFCF8}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.note{border:1px solid var(--hair);background:var(--card);border-radius:6px;padding:12px 16px;margin:14px 0}
+.note h4{margin:0 0 4px;font-size:13px;color:var(--ink3);letter-spacing:.06em}
+.foot{padding:40px 0 80px;color:var(--ink3);font-size:13px}
+@media(max-width:1200px){.shell{grid-template-columns:1fr}.toc{display:none}.sec{grid-template-columns:minmax(0,1fr)}.sec>.margin{grid-column:1;order:3;padding-top:0}}
+@media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:30px}}
+@media print{.bar,.banner,.toc{display:none}.shell{display:block}ins,del{print-color-adjust:exact}}
+
+.toc .subs{display:none;margin:2px 0 6px 14px}
+.toc .g.open .subs{display:block}
+.toc a.s{font-size:13px;padding:3px 10px 3px 12px;color:var(--ink3);border-left:2px solid var(--hair)}
+.toc a.s.on{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:none}
+.toc a.c.on2{}
+body.only-changed .toc .g:not(.chg){display:none}
+.mono{font:.86em var(--mono)}
+td.mono{font:12.5px/22.4px var(--mono)}
+.small{font-size:13px;color:var(--ink3)}
+.lede code,.chap-h code{white-space:nowrap}
+.tag{display:inline-block;font:500 .72em var(--mono);padding:1px .6em;border-radius:4px;vertical-align:1px;white-space:nowrap}
+.tag.a{background:var(--amber-bg);color:var(--amber)}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.mn.ok{border-left-color:var(--ins-b)} .mn.ok b.lb{color:var(--ins-b)}
+.mn.warn{border-left-color:var(--del-b)} .mn.warn b.lb{color:var(--del-b)}
+.mn p{margin:0 0 6px}
+.cards{display:grid;grid-template-columns:1fr;gap:12px;margin:16px 0}
+.card{background:var(--card);border:1px solid var(--hair);border-left:3px solid var(--ink3);border-radius:8px;padding:12px 16px;font-size:14px;line-height:1.7;color:var(--ink2)}
+.card b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.card.hot{border-left-color:var(--amber)}.card.risk{border-left-color:var(--del-b)}.card.evt{border-left-color:var(--ins-b)}
+ul.gate,ul.check,ol.seq{list-style:none;margin:16px 0;padding:0}
+ul.gate li,ul.check li,ol.seq li{position:relative;border-top:1px solid var(--hair);font-size:14.5px;color:var(--ink2);line-height:1.7}
+ul.gate li:last-child,ul.check li:last-child,ol.seq li:last-child{border-bottom:1px solid var(--hair)}
+ul.gate li{padding:10px 0 10px 84px}ul.gate li .tag{position:absolute;left:0;top:13px}
+ul.check li{padding:10px 0 10px 30px}
+ul.check li::before{content:"";position:absolute;left:2px;top:16px;width:12px;height:12px;border:1.5px solid #CFCCC2;border-radius:3px;background:var(--card)}
+ol.seq{counter-reset:step}
+ol.seq li{counter-increment:step;padding:14px 0 12px 44px}
+ol.seq li::before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:16px;font:12px var(--mono);color:var(--amber)}
+ol.seq b{display:block;font-weight:600;color:var(--ink);margin-bottom:2px}
+ol.seq span{display:block;font-size:14px}
+.prs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+a.pr{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;padding:3px 10px;border:1px solid #EBD6A6;border-radius:6px;background:var(--amber-bg);color:var(--amber);text-decoration:none}
+a.pr .n{font:500 12px var(--mono)}a.pr .st{font:10.5px var(--mono);color:var(--ink3)}
+span.pr-todo{display:inline-block;font-size:12.5px;padding:3px 10px;border:1px dashed #CFCCC2;border-radius:6px;color:var(--ink3)}
+.prtable td,table.t td{white-space:normal}
+details.sql{border:1px solid var(--hair);border-radius:6px;margin:12px 0;background:var(--card)}
+details.sql summary{padding:8px 14px;cursor:pointer}
+.mn.inl{border:1px solid var(--hair);border-left-width:3px;background:var(--card);border-radius:6px;padding:12px 18px;font-size:14.5px;margin:6px 0 14px}
+ul.pts{list-style:none;margin:10px 0 14px;padding:0}
+ul.pts li{position:relative;padding:5px 0 5px 22px;color:var(--ink2)}
+ul.pts li::before{content:"";position:absolute;left:6px;top:15px;width:5px;height:5px;border-radius:50%;background:var(--amber)}
+ol.seq li{color:var(--ink)}
+</style>
+</head>
+<body class="show-changes">
+
+<div class="bar"><div class="in">
+  <div class="logo">Yellow<i style="font-style:normal">.</i></div>
+  <div class="crumb">Engineering · PR 开发流程</div>
+  <div class="sp"></div>
+  <span class="pill">v1 · 面向开发</span>
+  <a class="lang" href="dev-pr-workflow.en.html" onclick="this.href=this.href.split('#')[0]+location.hash">English</a>
+</div></div>
+
+
+<div class="shell">
+<nav class="toc" id="toc">
+  <div class="k">目录</div>
+  <div class="g" data-c="why"><a class="c" href="#why"><span><span class="no">01</span>为什么</span></a><div class="subs"><a class="s" href="#why-1">大 PR 的代价</a></div></div><div class="g" data-c="rules"><a class="c" href="#rules"><span><span class="no">02</span>规则</span></a><div class="subs"><a class="s" href="#rules-1">规则一览</a><a class="s" href="#rules-2">执行状态</a></div></div><div class="g" data-c="count"><a class="c" href="#count"><span><span class="no">03</span>怎么数行数</span></a><div class="subs"><a class="s" href="#count-1">命令</a><a class="s" href="#count-2">哪些算</a><a class="s" href="#count-3">例外</a></div></div><div class="g" data-c="split"><a class="c" href="#split"><span><span class="no">04</span>怎么拆</span></a><div class="subs"><a class="s" href="#split-1">五种有效的切法</a><a class="s" href="#split-2">示例：XRP 计价永续</a></div></div><div class="g" data-c="title"><a class="c" href="#title"><span><span class="no">05</span>PR 标题</span></a><div class="subs"><a class="s" href="#title-1">格式</a><a class="s" href="#title-2">好与不好</a></div></div><div class="g" data-c="desc"><a class="c" href="#desc"><span><span class="no">06</span>PR 描述</span></a><div class="subs"><a class="s" href="#desc-1">模板</a></div></div><div class="g" data-c="series"><a class="c" href="#series"><span><span class="no">07</span>系列与依赖</span></a><div class="subs"><a class="s" href="#series-1">状态表</a><a class="s" href="#series-2">前一个没合入时，先写下一个</a></div></div><div class="g" data-c="review"><a class="c" href="#review"><span><span class="no">08</span>评审人</span></a><div class="subs"><a class="s" href="#review-1">评审人怎么做</a></div></div><div class="g" data-c="check"><a class="c" href="#check"><span><span class="no">09</span>检查清单</span></a><div class="subs"><a class="s" href="#check-1">清单</a></div></div>
+</nav>
+
+<main>
+  <header class="hero" id="top">
+    <div class="eyebrow">工程流程 · NEODAX</div>
+    <h1>每个 PR 都要小</h1>
+    <p>每个需要评审的 PR 必须<strong>最多改 300 行生产代码</strong>，只做一件事，并且能独立合并。本文说明怎么数行数、怎么拆、PR 标题怎么命名。</p>
+    <div class="chips"><span class="chip">v1</span><span class="chip">2026-11-19</span><span class="chip">适用于 neodax</span></div>
+    <div class="kpis"><div class="kpi"><div class="k">行数上限</div><div class="v">300<small>行</small></div></div><div class="kpi"><div class="k">每个 PR 的关注点</div><div class="v">1</div></div><div class="kpi"><div class="k">PR 的 base 分支</div><div class="v" style="font-size:26px;padding-top:8px">master</div></div><div class="kpi"><div class="k">评审时间目标</div><div class="v">30<small>分钟</small></div></div></div>
+  </header>
+
+<section class="chapter" id="why"><div class="chap-h"><div class="eyebrow">背景</div><h1><span class="no">01</span>为什么要小 PR</h1><p class="lede">大 PR 评审慢、容易出错、难以回退。我们的 CI 也默认是小 PR、目标是 <code>master</code>。</p></div><div class="sec"><div class="main"><h2 id="why-1">大 PR 的代价</h2><p>最近一个提现风控 PR 改了 47 个文件，约 <strong>6,500 行生产代码</strong>（含测试和文档共 11,500 行），评审了三轮、提出十条问题，其中有一个会阻塞热点流水表写入的迁移，还有一个永远不会触发的告警。这两个问题在这么大的 diff 里很容易漏掉，在 300 行的 PR 里很容易发现。</p><ul class="pts"><li>评审人看过几百行之后注意力下降，真正的问题会藏在常规改动里。</li><li>问题发现得晚，依赖它的大量代码都要重写。</li><li>PR 里有一部分有问题，其余部分也合不进去。</li><li>回退大 PR 时，好的部分也一起被回退。</li></ul></div><div class="margin"><div class="mn"><b class="lb">仓库事实</b><p>只开了 <strong>squash 和 rebase</strong> 两种合并。PR 的 CI（测试、迁移顺序、proto 检查）只在 base 是 <code>master</code>、<code>uat</code> 或 <code>release/**</code> 时触发。</p></div></div></div></section>
+<section class="chapter" id="rules"><div class="chap-h"><div class="eyebrow">规则</div><h1><span class="no">02</span>规则</h1><p class="lede">共八条。第一条是评审人会执行的。</p></div><div class="sec"><div class="main"><h2 id="rules-1">规则一览</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>#</th><th>规则</th><th>说明</th></tr></thead><tbody><tr><td>1</td><td><strong>每个 PR 最多新增 300 行生产代码</strong></td><td>目标 200 到 300 行。测试、生成代码、种子数据和文档不算（第 03 章）。超过 300 行需要批准的例外。</td></tr><tr><td>2</td><td><strong>每个 PR 只做一件事</strong></td><td>标题里需要写"和"，通常说明是两个 PR。</td></tr><tr><td>3</td><td><strong>自成一体</strong></td><td>能编译，测试全绿，除非 PR 里说明，否则对线上行为没有任何改变。不能让 <code>master</code> 处于损坏状态，也不能靠未合入的 PR 才通过。</td></tr><tr><td>4</td><td><strong>base 永远是 <code>master</code></strong></td><td>不要把 PR 叠在另一个 PR 的分支上，也不要合进功能分支：这些 base 不会触发 CI。</td></tr><tr><td>5</td><td><strong>有依赖的 PR，等前一个合入后再开</strong></td><td>可以提前在本地写好（第 07 章），但 base 合入之前不要开 PR。</td></tr><tr><td>6</td><td><strong>测试跟着代码走</strong></td><td>不单独做纯测试 PR，除非是给已合入的代码补覆盖。</td></tr><tr><td>7</td><td><strong>标题和描述按模板写</strong></td><td>见第 05、06 章。描述第一行写依赖和行数。</td></tr><tr><td>8</td><td><strong>新行为默认不生效</strong></td><td>增加新能力的 PR，在系列里最后一个 PR 打开之前，不能改变用户看到的任何东西。</td></tr></tbody></table></div><div class="main"><h2 id="rules-2">执行状态</h2><p>目前评审人手工执行这些规则。CI 的行数检查和 <code>size-exception</code> 标签是<span class="tag a">提议</span>，还没有上线。在那之前，开 PR 前请先跑第 03 章的命令，把数字写进描述。</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="count"><div class="chap-h"><div class="eyebrow">度量</div><h1><span class="no">03</span>怎么数行数</h1><p class="lede">只数新增的生产代码行。任何人用一条命令都能复现这个数字。</p></div><div class="sec"><div class="main"><h2 id="count-1">命令</h2><p>在你的分支上执行，先拉取最新的 <code>master</code>：</p><pre>git fetch origin master
+git diff --numstat origin/master...HEAD -- . \
+  ':(exclude)*_test.go' ':(exclude)*.pb.go' ':(exclude)*.pb.gw.go' \
+  ':(exclude)*/seeds/*' ':(exclude)doc' ':(exclude)docs' ':(exclude)*.md' \
+  | awk '{a+=$1} END{print a" added production lines"}'</pre><p>描述里用同样的写法，例如 <code>Production code: 241 added lines</code>。</p></div><div class="margin"><div class="mn ok"><b class="lb">已验证</b><p>这条命令已经对本仓库里的一个真实 PR 跑过，返回的是排除路径之外新增的行数。</p></div></div><div class="main"><h2 id="count-2">哪些算</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>计入</th><th>不计入</th></tr></thead><tbody><tr><td>Go 源码、SQL 迁移、<code>.proto</code> 定义、YAML 和 JSON 配置、脚本、CI 工作流、Helm values</td><td>以 <code>_test.go</code> 结尾的文件；生成的 <code>*.pb.go</code> 和 <code>*.pb.gw.go</code>；<code>seeds/</code> 下的种子数据；<code>doc/</code>、<code>docs/</code> 以及任何 <code>.md</code> 文件</td></tr></tbody></table></div><div class="main"><p>只数<strong>新增</strong>的行。删代码评审成本低，所以主要是删除的 PR 可以大一些，但要先申请例外。</p></div><div class="margin"></div><div class="main"><h2 id="count-3">例外</h2><p>例外需要打 <code>size-exception</code> 标签，并在描述里用一句话说明为什么拆不开。评审人可以拒绝。可接受的理由：</p><ul class="pts"><li>迁移和依赖它的代码必须一起发布才能保持一致。</li><li>没有逻辑的机械改动，比如跨很多文件的重命名。</li><li>纯删除无用代码。</li></ul><p>不接受的理由："都是相关的"、"拆开太麻烦"、"测试太多"。</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="split"><div class="chap-h"><div class="eyebrow">拆分</div><h1><span class="no">04</span>怎么拆任务</h1><p class="lede">先定拆分方案，再写代码。沿着能让每个 PR 单独安全的接缝去切。</p></div><div class="sec"><div class="main"><h2 id="split-1">五种有效的切法</h2><ol class="seq"><li><b>先做不改行为的重构。</b><span>用一个 PR 只挪动或重命名代码、行为不变，下一个 PR 再改行为。</span></li><li><b>新增没人调用的代码。</b><span>新函数或新文件加上它的测试。可以安全合入：它还没生效。</span></li><li><b>接入。</b><span>一个很小的 PR，把新代码接到调用方。</span></li><li><b>每个 PR 只改一个服务。</b><span>除非无法避免，不要在一个改动里混合 <code>quote</code>、<code>pm_perp</code> 和 <code>analytics</code>。</span></li><li><b>表结构和使用分开。</b><span>先发加可空列的迁移，再发读取它的代码。</span></li></ol></div><div class="margin"></div><div class="main"><h2 id="split-2">示例：XRP 计价永续</h2><p>XRP 方案拆成 6 组共 15 个 PR。行数是按调用点估计的，不是实测，读完代码后再定稿。</p></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>组</th><th>#</th><th>范围（拟）</th><th>估计行数</th><th>依赖</th></tr></thead><tbody><tr><td>A 保证金分组</td><td>[1/3]</td><td>新增按币种分组的函数，并用于账户权益</td><td>~250</td><td>无</td></tr><tr><td></td><td>[2/3]</td><td>接入全仓扫描和强平</td><td>~250</td><td>[1/3]</td></tr><tr><td></td><td>[3/3]</td><td>新增 <code>isolated_only</code> 开关；下单币种必须等于计价币种</td><td>~200</td><td>无</td></tr><tr><td>B 划转</td><td>[1/2]</td><td><code>is_collateral</code> 字段、迁移、种子开关</td><td>~100</td><td>无</td></tr><tr><td></td><td>[2/2]</td><td>替换 3 处划转闸门</td><td>~150</td><td>[1/2]</td></tr><tr><td>C 合成价</td><td>[1/3]</td><td>quote 派生市场阶段：指数价和标记价</td><td>~300</td><td>无</td></tr><tr><td></td><td>[2/3]</td><td>腿状态继承、SAFE_MODE、保护检查</td><td>~250</td><td>[1/3]</td></tr><tr><td></td><td>[3/3]</td><td>合成资金费率和新鲜度检查</td><td>~250</td><td>[1/3]</td></tr><tr><td>D USD 折算</td><td>[1/4]</td><td>成交时折算手续费和成交量</td><td>~250</td><td>无</td></tr><tr><td></td><td>[2/4]</td><td>事件加币种字段；analytics 资金费和权益</td><td>~250</td><td>无</td></tr><tr><td></td><td>[3/4]</td><td>返佣和 fee-engine 换算</td><td>~200</td><td>无</td></tr><tr><td></td><td>[4/4]</td><td>保险基金符号解析；去掉写死的 USDT</td><td>~100</td><td>无</td></tr><tr><td>E 风控</td><td>[1/2]</td><td>每市场持仓量上限，超限只减仓</td><td>~250</td><td>无</td></tr><tr><td></td><td>[2/2]</td><td>结算池为负的告警和自动只减仓</td><td>~200</td><td>[1/2]</td></tr><tr><td>F 上线</td><td>[1/1]</td><td>XRP 资产、两个 INVISIBLE 市场、风险档位、quote 配置</td><td>~150</td><td>A 到 E</td></tr></tbody></table></div><div class="main"><p>A 到 E 组在 F 组创建市场之前对线上没有影响，所以只要满足依赖列，可以按任意顺序合。迁移必须按时间戳顺序合（迁移检查要求新版本大于 base 里的最大版本）。</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="title"><div class="chap-h"><div class="eyebrow">命名</div><h1><span class="no">05</span>PR 标题怎么命名</h1><p class="lede">squash 合并的提交使用 PR 标题，所以标题就是留在历史里的内容。要简短、具体，并且沿用现有风格。</p></div><div class="sec"><div class="main"><h2 id="title-1">格式</h2><pre>&lt;type&gt;(&lt;scope&gt;): [&lt;ticket&gt;] [&lt;n&gt;/&lt;N&gt;] &lt;imperative summary&gt;</pre><ul class="pts"><li><strong>type</strong>：<code>feat</code>、<code>fix</code>、<code>refactor</code>、<code>perf</code>、<code>test</code>、<code>docs</code>、<code>ci</code> 或 <code>chore</code>。仓库现在就是这样写的。</li><li><strong>scope</strong>：服务或模块，例如 <code>pm_perp</code>、<code>quote</code>、<code>analytics</code>、<code>trading-api</code>、<code>fee-engine</code>。多个 scope 用逗号分隔。</li><li><strong>ticket</strong>：可选，例如 <code>[YEN-3757]</code>。</li><li><strong>[n/N]</strong>：PR 属于一个系列时必填，N 是这一组的 PR 总数。这是新增的约定。</li><li><strong>summary</strong>：英文，祈使句（"add"、"move"、"apply"），末尾不加句号，整个标题不超过 72 个字符。</li></ul></div><div class="margin"><div class="mn"><b class="lb">系列</b><p>只在一组内编号，例如 XRP 的 A 组是 <code>[1/3]</code> 到 <code>[3/3]</code>。组名写在 scope 或 summary 里，方便检索。</p></div></div><div class="main"><h2 id="title-2">好与不好</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>标题</th><th>评价</th><th>原因</th></tr></thead><tbody><tr><td><code>feat(pm_perp): [1/3] group unrealized PnL by quote asset</code></td><td><span class="tag keep">好</span></td><td>有 type、scope、系列序号，summary 具体且是祈使句。</td></tr><tr><td><code>feat(pm_perp,analytics): [YEN-3757] [2/4] add asset field to funding events</code></td><td><span class="tag keep">好</span></td><td>ticket 和序号同时有；改动跨两个模块所以写了两个 scope。</td></tr><tr><td><code>feat: XRP perps (all changes)</code></td><td><span class="tag stop">差</span></td><td>没有 scope 和序号，一看就是巨型 PR。</td></tr><tr><td><code>fix(pm): wip</code></td><td><span class="tag stop">差</span></td><td>看不出改了什么。</td></tr><tr><td><code>feat(quote): derived market and funding rate and freshness check</code></td><td><span class="tag stop">差</span></td><td>一个标题里有三件事，应该拆开。</td></tr><tr><td><code>Update margin_manager.go</code></td><td><span class="tag stop">差</span></td><td>写的是文件名而不是改动，也不符合 type(scope) 风格。</td></tr></tbody></table></div></div></section>
+<section class="chapter" id="desc"><div class="chap-h"><div class="eyebrow">模板</div><h1><span class="no">06</span>PR 描述</h1><p class="lede">第一行告诉评审人这个 PR 有多大、依赖什么，让他十秒钟内决定要不要开始看。</p></div><div class="sec"><div class="main"><h2 id="desc-1">模板</h2><pre>Depends on: #1234   (or: none, can merge in any order)
+Production code: 241 added lines   (command in chapter 03)
+Series: group A margin grouping, 1 of 3
+
+## What
+One paragraph: what this PR changes and nothing else.
+
+## Why
+The reason, with a link to the design or ticket.
+
+## Safety
+What changes in production when this merges (ideally: nothing),
+and how it is verified.
+
+## Tests
+The tests added or changed, and the command to run them.
+
+## Not in this PR
+The follow-up PRs, so reviewers do not ask for them here.</pre></div><div class="margin"><div class="mn"><b class="lb">语言</b><p>标题、描述、代码注释和文档一律使用英文，所以模板也是英文。</p></div></div></div></section>
+<section class="chapter" id="series"><div class="chap-h"><div class="eyebrow">按系列推进</div><h1><span class="no">07</span>按系列推进</h1><p class="lede">系列是若干个小 PR 合起来完成一个任务。每个都以 <code>master</code> 为目标。维护一张状态表，让大家都能看到进度。</p></div><div class="sec"><div class="main"><h2 id="series-1">状态表</h2><p>负责人在跟踪 issue 里维护两张表：已开出的 PR，和还在计划中的 PR。每次开 PR 或合并时更新。格式示例（编号为示意）：</p></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>#</th><th>PR</th><th>完整标题</th><th>状态</th></tr></thead><tbody><tr><td>[1/3]</td><td>#1801</td><td>feat(pm_perp): [1/3] group unrealized PnL by quote asset</td><td>已合并</td></tr><tr><td>[2/3]</td><td>#1805</td><td>feat(pm_perp): [2/3] apply per-asset margin to the cross scanner</td><td>评审中</td></tr><tr><td>[3/3]</td><td>（未开）</td><td>计划：新增 <code>isolated_only</code> 开关和下单币种校验</td><td>计划中</td></tr></tbody></table></div><div class="main"><p>计划中的 PR 只写范围。正式标题在开 PR 时再定。</p></div><div class="margin"></div><div class="main"><h2 id="series-2">前一个没合入时，先写下一个</h2><p>不用干等。在本地从前一个 PR 的分支拉出分支，把下一个 PR 写好、测好，但先不发布。前一个被 squash 合入之后，把你的分支挪到 <code>master</code> 上，再开 PR：</p><pre>git fetch origin
+git rebase --onto origin/master &lt;last-commit-of-predecessor&gt; my-next-branch
+git push --force-with-lease -u origin my-next-branch
+gh pr create --base master</pre></div><div class="margin"><div class="mn"><b class="lb">为什么不提前开</b><p>base 是另一个 PR 分支的 PR 在这里没有 CI，而且前一个每次 squash 合并都会逼你 rebase。等合入之后再开，两个问题都避免了。</p></div></div><div class="main"><p>如果前一个 PR 在评审中有改动，开自己的 PR 之前要重新 rebase 本地分支。最多提前写一个有依赖的 PR。</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="review"><div class="chap-h"><div class="eyebrow">给评审人</div><h1><span class="no">08</span>给评审人</h1><p class="lede">评审人应当先在大小上把关，再看代码。</p></div><div class="sec"><div class="main"><h2 id="review-1">评审人怎么做</h2><ul class="pts"><li>描述里没有行数，要求补上。</li><li>数字超过 300 行又没有批准的例外，要求拆分。不需要先看代码。</li><li>PR 做了两件事，要求拆成两个 PR。</li><li>PR 依赖没合入的内容，要求作者等合入后再开。</li><li>检查"Safety"部分：系列里的 PR 除了最后一个，不应该改变线上任何东西。</li></ul></div><div class="margin"></div></div></section>
+<section class="chapter" id="check"><div class="chap-h"><div class="eyebrow">开 PR 之前</div><h1><span class="no">09</span>开 PR 之前的清单</h1><p class="lede">每一条都要满足。有一条不满足，先改好再开。</p></div><div class="sec"><div class="main"><h2 id="check-1">清单</h2><ul class="check"><li>行数命令显示新增不超过 300 行，数字已写进描述。</li><li>PR 只做一件事，标题里不需要写"和"。</li><li>base 是 <code>master</code>，所有依赖都已合入。</li><li>标题符合 <code>type(scope): [n/N] summary</code>，且是英文。</li><li>描述第一行写了依赖和行数，并有 Safety 部分。</li><li>这段代码的测试在 PR 里，且本地通过。</li><li>系列里后面的 PR 还没合入时，用户看到的东西没有变化。</li><li>迁移版本号大于当前 <code>master</code> 里的最大版本。</li></ul></div><div class="margin"></div></div></section>
+
+  <div class="foot">仓库的事实（合并方式、哪些工作流对哪些 base 分支触发）已于 2026-11-19 在 layer-3/neodax 里核实。标记为"提议"的项目 CI 还没有强制执行。</div>
+</main>
+</div>
+
+<script>
+(function(){
+  var groups=[].slice.call(document.querySelectorAll('.toc .g'));
+  var map={};[].forEach.call(document.querySelectorAll('.toc a'),function(a){map[a.getAttribute('href').slice(1)]=a});
+  function setOn(id){
+    [].forEach.call(document.querySelectorAll('.toc a.on'),function(a){a.classList.remove('on')});
+    var a=map[id]; if(!a) return; a.classList.add('on');
+    var g=a.closest('.g'); groups.forEach(function(x){x.classList.toggle('open',x===g)});
+  }
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting) setOn(e.target.id||e.target.closest('.chapter').id); });
+  },{rootMargin:'-15% 0px -75% 0px'});
+  [].forEach.call(document.querySelectorAll('.chapter,.sec h2[id]'),function(s){io.observe(s)});
+})();
+</script>
+</body>
+</html>

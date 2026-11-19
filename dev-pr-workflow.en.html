@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeoDAX · How we keep pull requests small</title>
+<style>
+.copy{position:relative}
+
+/* spec — long-form design proposal. Three columns on wide screens:
+   sticky TOC | reading column | margin column. Wide tables break out of the text
+   column. Revisions are first-class: ins/del marks, per-section "Updated" pills,
+   margin change notes, a changelog banner and a "since you last read" memory. */
+:root{
+  --bg:#FBFAF7; --card:#fff; --ink:#16181D; --ink2:#4A4D55; --ink3:#8A8C92;
+  --hair:#E4E2DB; --hair2:#EFEDE7; --chip:#F0EEE8; --accent:#1F2A44;
+  --amber:#97690A; --amber-bg:#FBF1DC;
+  --ins:#E3F1E8; --ins-b:#2E7D4F; --del:#F8E3E0; --del-b:#C0392B;
+  --new:#EEE9FB; --new-b:#6A3FB5;
+  --serif:"Noto Serif SC","Songti SC","Source Han Serif SC",Georgia,serif;
+  --sans:Inter,"PingFang SC","Noto Sans SC","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 var(--sans)}
+code{font:.86em var(--mono);background:var(--chip);padding:1px 6px;border-radius:3px}
+a{color:var(--accent)}
+/* top bar + changelog banner */
+.bar{position:sticky;top:0;z-index:20;background:rgba(251,250,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar .in{max-width:1560px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:18px}
+.logo{font:600 22px var(--serif)}
+.crumb{padding-left:18px;border-left:1px solid var(--hair);color:var(--ink2);font-size:14px}
+.sp{flex:1}
+.pill{font:600 12px var(--sans);padding:2px 10px;border-radius:99px;background:var(--amber-bg);color:var(--amber);border:1px solid #EBD6A6}
+.lang{font-size:14px;color:var(--ink2);text-decoration:none;border:1px solid var(--hair);border-radius:4px;padding:3px 12px;background:var(--card)}
+.banner{background:var(--amber-bg);border-bottom:1px solid #EBD6A6}
+.banner .in{max-width:1560px;margin:0 auto;padding:12px 32px;display:flex;gap:22px;align-items:center;flex-wrap:wrap;font-size:14px}
+.banner b{font-weight:700}
+.tog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink2);user-select:none}
+.tog input{accent-color:var(--accent)}
+.btn{border:1px solid #D9C48F;background:#fff;border-radius:4px;padding:3px 12px;font:13px var(--sans);cursor:pointer;color:var(--ink)}
+.chg-list{display:none;max-width:1560px;margin:0 auto;padding:0 32px 14px}
+.chg-list.open{display:block}
+.chg-list table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #EBD6A6}
+.chg-list th,.chg-list td{padding:6px 12px;border-bottom:1px solid var(--hair2);text-align:left}
+.chg-list th{background:#FFF8E8;font-weight:600}
+/* shell */
+.shell{max-width:1560px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.toc{position:sticky;top:112px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding:28px 0}
+.toc .k{font-size:12px;letter-spacing:.08em;color:var(--ink3);margin-bottom:10px}
+.toc a.c,.toc a.s{display:flex;justify-content:space-between;gap:8px;align-items:center;text-decoration:none;color:var(--ink2);font-size:14px;line-height:1.5;padding:6px 10px 6px 12px;border-left:2px solid var(--hair)}
+.toc a:hover{color:var(--ink);background:var(--hair2)}
+.toc a.on,.toc .g.open>a.c{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--card)}
+.toc a .no{font:12px var(--mono);color:var(--ink3);margin-right:8px}
+.toc .b{font:700 10px var(--sans);padding:1px 6px;border-radius:99px;background:var(--ins);color:var(--ins-b);flex-shrink:0}
+.toc .b.new{background:var(--new);color:var(--new-b)}
+body.only-changed .toc a:not([data-ch]){display:none}
+/* article */
+.hero{padding:44px 0 26px;border-bottom:2px solid var(--ink)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.14em;color:var(--amber)}
+.hero h1{margin:8px 0 8px;font:500 40px/1.25 var(--serif);letter-spacing:.3px}
+.hero p{margin:0;max-width:760px;color:var(--ink2);font-size:17px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.chip{background:var(--chip);border:1px solid var(--hair);border-radius:3px;padding:2px 11px;font:13px var(--mono);color:var(--ink2)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:36px;margin:28px 0 8px}
+.kpi{border-top:2px solid var(--ink);padding-top:12px}
+.kpi .k{font-size:13px;color:var(--ink2)} .kpi .v{font:500 34px/1.4 var(--serif)} .kpi .v small{font:14px var(--serif);color:var(--ink2);margin-left:4px}
+/* section = reading column + margin column; .wide spans both */
+.chapter{position:relative;padding:44px 0 20px;border-bottom:1px solid var(--hair)}
+.chap-h{margin-bottom:6px;max-width:900px}
+.chap-h .eyebrow{font:600 12px var(--sans);letter-spacing:.12em;color:var(--amber);text-transform:uppercase}
+.chap-h h1{margin:6px 0 10px;font:500 34px/1.3 var(--serif)}
+.chap-h h1 .no{font:16px var(--mono);color:var(--ink3);margin-right:14px}
+.chap-h .lede{margin:0 0 6px}
+.sec{display:grid;grid-template-columns:minmax(0,720px) minmax(240px,1fr);column-gap:48px;padding:6px 0 4px;position:relative}
+.sec>.main{grid-column:1}
+.sec>.margin{grid-column:2;padding-top:6px}
+.sec>.wide{grid-column:1/-1;margin:8px 0 8px;overflow-x:auto;background:var(--card);border:1px solid var(--hair);border-radius:6px}
+.sec h2{margin:26px 0 8px;font:500 23px/1.4 var(--serif)}
+.sec h2 .no{font:15px var(--mono);color:var(--ink3);margin-right:12px}
+.sec h3{margin:26px 0 6px;font:600 16px var(--sans)}
+.sec p{margin:0 0 14px}
+.lede{font-size:17px;color:var(--ink2)}
+pre{background:#16181F;color:#E8E6DF;border-radius:6px;padding:14px 18px;overflow:auto;font:13px/1.8 var(--mono);margin:12px 0 16px}
+pre .c{color:#8A8C92}
+/* margin notes */
+.mn{font-size:13px;line-height:1.65;color:var(--ink2);border-left:2px solid var(--hair);padding:2px 0 2px 14px;margin:0 0 18px}
+.mn b.lb{display:block;font-size:11px;letter-spacing:.08em;color:var(--ink3);margin-bottom:2px}
+.mn.chg{border-left-color:var(--ins-b);background:linear-gradient(90deg,#F2F9F5,transparent)}
+.mn.chg b.lb{color:var(--ins-b)}
+.mn.todo{border-left-color:var(--amber)} .mn.todo b.lb{color:var(--amber)}
+/* revision markup */
+.pillrev{display:inline-block;vertical-align:middle;margin-left:14px;font:700 11px var(--sans);letter-spacing:.04em;padding:2px 9px;border-radius:99px;background:var(--ins);color:var(--ins-b)}
+.pillrev.new{background:var(--new);color:var(--new-b)}
+.chapter.upd::before{content:"";position:absolute;left:-18px;top:48px;bottom:28px;width:3px;border-radius:3px;background:var(--ins-b);opacity:0}
+.chapter.upd.fresh::before{opacity:1}
+.chapter.upd.fresh.isnew::before{background:var(--new-b)}
+body:not(.show-changes) .pillrev,body:not(.show-changes) .chapter.upd::before{display:none}
+ins{text-decoration:none;background:var(--ins);border-bottom:2px solid var(--ins-b);padding:0 2px}
+del{background:var(--del);color:var(--del-b);text-decoration:line-through;padding:0 2px}
+body:not(.show-changes) ins{background:none;border-bottom:0}
+body:not(.show-changes) del{display:none}
+body.hide-del del{display:none}
+body.only-changed .chapter:not(.upd){display:none}
+/* tables */
+table.t{width:100%;border-collapse:collapse;font-size:14px;line-height:1.6}
+table.t th{position:sticky;top:0;background:#FAF9F5;text-align:left;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--ink);white-space:nowrap}
+table.t td{padding:10px 14px;border-bottom:1px solid var(--hair2);vertical-align:top;min-width:160px}
+table.t td:first-child,table.t th:first-child{position:sticky;left:0;background:#fff;font-weight:600;min-width:130px;border-right:1px solid var(--hair2);z-index:1}
+table.t tr:hover td{background:#FDFCF8} table.t tr:hover td:first-child{background:#FDFCF8}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.note{border:1px solid var(--hair);background:var(--card);border-radius:6px;padding:12px 16px;margin:14px 0}
+.note h4{margin:0 0 4px;font-size:13px;color:var(--ink3);letter-spacing:.06em}
+.foot{padding:40px 0 80px;color:var(--ink3);font-size:13px}
+@media(max-width:1200px){.shell{grid-template-columns:1fr}.toc{display:none}.sec{grid-template-columns:minmax(0,1fr)}.sec>.margin{grid-column:1;order:3;padding-top:0}}
+@media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:30px}}
+@media print{.bar,.banner,.toc{display:none}.shell{display:block}ins,del{print-color-adjust:exact}}
+
+.toc .subs{display:none;margin:2px 0 6px 14px}
+.toc .g.open .subs{display:block}
+.toc a.s{font-size:13px;padding:3px 10px 3px 12px;color:var(--ink3);border-left:2px solid var(--hair)}
+.toc a.s.on{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:none}
+.toc a.c.on2{}
+body.only-changed .toc .g:not(.chg){display:none}
+.mono{font:.86em var(--mono)}
+td.mono{font:12.5px/22.4px var(--mono)}
+.small{font-size:13px;color:var(--ink3)}
+.lede code,.chap-h code{white-space:nowrap}
+.tag{display:inline-block;font:500 .72em var(--mono);padding:1px .6em;border-radius:4px;vertical-align:1px;white-space:nowrap}
+.tag.a{background:var(--amber-bg);color:var(--amber)}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.mn.ok{border-left-color:var(--ins-b)} .mn.ok b.lb{color:var(--ins-b)}
+.mn.warn{border-left-color:var(--del-b)} .mn.warn b.lb{color:var(--del-b)}
+.mn p{margin:0 0 6px}
+.cards{display:grid;grid-template-columns:1fr;gap:12px;margin:16px 0}
+.card{background:var(--card);border:1px solid var(--hair);border-left:3px solid var(--ink3);border-radius:8px;padding:12px 16px;font-size:14px;line-height:1.7;color:var(--ink2)}
+.card b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.card.hot{border-left-color:var(--amber)}.card.risk{border-left-color:var(--del-b)}.card.evt{border-left-color:var(--ins-b)}
+ul.gate,ul.check,ol.seq{list-style:none;margin:16px 0;padding:0}
+ul.gate li,ul.check li,ol.seq li{position:relative;border-top:1px solid var(--hair);font-size:14.5px;color:var(--ink2);line-height:1.7}
+ul.gate li:last-child,ul.check li:last-child,ol.seq li:last-child{border-bottom:1px solid var(--hair)}
+ul.gate li{padding:10px 0 10px 84px}ul.gate li .tag{position:absolute;left:0;top:13px}
+ul.check li{padding:10px 0 10px 30px}
+ul.check li::before{content:"";position:absolute;left:2px;top:16px;width:12px;height:12px;border:1.5px solid #CFCCC2;border-radius:3px;background:var(--card)}
+ol.seq{counter-reset:step}
+ol.seq li{counter-increment:step;padding:14px 0 12px 44px}
+ol.seq li::before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:16px;font:12px var(--mono);color:var(--amber)}
+ol.seq b{display:block;font-weight:600;color:var(--ink);margin-bottom:2px}
+ol.seq span{display:block;font-size:14px}
+.prs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+a.pr{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;padding:3px 10px;border:1px solid #EBD6A6;border-radius:6px;background:var(--amber-bg);color:var(--amber);text-decoration:none}
+a.pr .n{font:500 12px var(--mono)}a.pr .st{font:10.5px var(--mono);color:var(--ink3)}
+span.pr-todo{display:inline-block;font-size:12.5px;padding:3px 10px;border:1px dashed #CFCCC2;border-radius:6px;color:var(--ink3)}
+.prtable td,table.t td{white-space:normal}
+details.sql{border:1px solid var(--hair);border-radius:6px;margin:12px 0;background:var(--card)}
+details.sql summary{padding:8px 14px;cursor:pointer}
+.mn.inl{border:1px solid var(--hair);border-left-width:3px;background:var(--card);border-radius:6px;padding:12px 18px;font-size:14.5px;margin:6px 0 14px}
+ul.pts{list-style:none;margin:10px 0 14px;padding:0}
+ul.pts li{position:relative;padding:5px 0 5px 22px;color:var(--ink2)}
+ul.pts li::before{content:"";position:absolute;left:6px;top:15px;width:5px;height:5px;border-radius:50%;background:var(--amber)}
+ol.seq li{color:var(--ink)}
+</style>
+</head>
+<body class="show-changes">
+
+<div class="bar"><div class="in">
+  <div class="logo">Yellow<i style="font-style:normal">.</i></div>
+  <div class="crumb">Engineering · Pull request workflow</div>
+  <div class="sp"></div>
+  <span class="pill">v1 · for the team</span>
+  <a class="lang" href="dev-pr-workflow.html" onclick="this.href=this.href.split('#')[0]+location.hash">中文</a>
+</div></div>
+
+
+<div class="shell">
+<nav class="toc" id="toc">
+  <div class="k">CONTENTS</div>
+  <div class="g" data-c="why"><a class="c" href="#why"><span><span class="no">01</span>Why</span></a><div class="subs"><a class="s" href="#why-1">What a large PR costs us</a></div></div><div class="g" data-c="rules"><a class="c" href="#rules"><span><span class="no">02</span>Rules</span></a><div class="subs"><a class="s" href="#rules-1">Rules at a glance</a><a class="s" href="#rules-2">Status of enforcement</a></div></div><div class="g" data-c="count"><a class="c" href="#count"><span><span class="no">03</span>Counting lines</span></a><div class="subs"><a class="s" href="#count-1">The command</a><a class="s" href="#count-2">What counts</a><a class="s" href="#count-3">Exceptions</a></div></div><div class="g" data-c="split"><a class="c" href="#split"><span><span class="no">04</span>How to split</span></a><div class="subs"><a class="s" href="#split-1">Five cuts that work</a><a class="s" href="#split-2">Worked example: XRP-quoted perpetuals</a></div></div><div class="g" data-c="title"><a class="c" href="#title"><span><span class="no">05</span>PR titles</span></a><div class="subs"><a class="s" href="#title-1">Format</a><a class="s" href="#title-2">Good and bad</a></div></div><div class="g" data-c="desc"><a class="c" href="#desc"><span><span class="no">06</span>Description</span></a><div class="subs"><a class="s" href="#desc-1">Template</a></div></div><div class="g" data-c="series"><a class="c" href="#series"><span><span class="no">07</span>Series & stacking</span></a><div class="subs"><a class="s" href="#series-1">The status table</a><a class="s" href="#series-2">Writing the next PR before the previous one merges</a></div></div><div class="g" data-c="review"><a class="c" href="#review"><span><span class="no">08</span>Reviewing</span></a><div class="subs"><a class="s" href="#review-1">What reviewers do</a></div></div><div class="g" data-c="check"><a class="c" href="#check"><span><span class="no">09</span>Checklist</span></a><div class="subs"><a class="s" href="#check-1">Checklist</a></div></div>
+</nav>
+
+<main>
+  <header class="hero" id="top">
+    <div class="eyebrow">ENGINEERING WORKFLOW · NEODAX</div>
+    <h1>Keep Every Pull Request Small</h1>
+    <p>Every PR that needs a review must change <strong>at most 300 lines of production code</strong>, do one thing, and be mergeable on its own. This page says how to count, how to split, and how to name the PRs.</p>
+    <div class="chips"><span class="chip">v1</span><span class="chip">2026-11-19</span><span class="chip">applies to neodax</span></div>
+    <div class="kpis"><div class="kpi"><div class="k">Size limit</div><div class="v">300<small>lines</small></div></div><div class="kpi"><div class="k">Concerns per PR</div><div class="v">1</div></div><div class="kpi"><div class="k">PR base branch</div><div class="v" style="font-size:26px;padding-top:8px">master</div></div><div class="kpi"><div class="k">Review time target</div><div class="v">30<small>min</small></div></div></div>
+  </header>
+
+<section class="chapter" id="why"><div class="chap-h"><div class="eyebrow">Context</div><h1><span class="no">01</span>Why small pull requests</h1><p class="lede">A large PR is slower to review, easier to get wrong, and harder to undo. Our CI also assumes a small PR that targets <code>master</code>.</p></div><div class="sec"><div class="main"><h2 id="why-1">What a large PR costs us</h2><p>A recent withdrawal-risk PR changed 47 files and about <strong>6,500 lines of production code</strong> (11,500 lines including tests and docs). It needed three review rounds and produced ten findings, among them a migration that would block writes on the hot ledger table and an alert that could never fire. Both are easy to miss in a diff that size and easy to catch in a 300-line PR.</p><ul class="pts"><li>Reviewers lose focus after a few hundred lines, so real problems hide among the routine ones.</li><li>A bug found late means rewriting a lot of dependent code.</li><li>One failing part blocks everything else in the PR from merging.</li><li>Rolling back a large PR also rolls back the good parts.</li></ul></div><div class="margin"><div class="mn"><b class="lb">Repository facts</b><p>Only <strong>squash and rebase</strong> merges are enabled. Pull-request CI (tests, migration order, proto lint) runs only when the base branch is <code>master</code>, <code>uat</code> or <code>release/**</code>.</p></div></div></div></section>
+<section class="chapter" id="rules"><div class="chap-h"><div class="eyebrow">The rules</div><h1><span class="no">02</span>The rules</h1><p class="lede">Eight rules. The first one is the one reviewers will enforce.</p></div><div class="sec"><div class="main"><h2 id="rules-1">Rules at a glance</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>#</th><th>Rule</th><th>Detail</th></tr></thead><tbody><tr><td>1</td><td><strong>At most 300 added lines of production code per PR</strong></td><td>Aim for 200 to 300. Tests, generated code, seed data and docs do not count (chapter 03). Over 300 needs an approved exception.</td></tr><tr><td>2</td><td><strong>One concern per PR</strong></td><td>If the title needs "and", it is probably two PRs.</td></tr><tr><td>3</td><td><strong>Self-contained</strong></td><td>Builds, all tests pass, and nothing changes in production behaviour unless the PR says so. A PR must not leave <code>master</code> broken or depend on an unmerged PR to pass.</td></tr><tr><td>4</td><td><strong>Base is always <code>master</code></strong></td><td>Do not stack a PR on another PR's branch and do not merge into a feature branch: CI does not run for those bases.</td></tr><tr><td>5</td><td><strong>A dependent PR is opened after its predecessor has merged</strong></td><td>You may write it locally earlier (chapter 07), but do not open it until the base is merged.</td></tr><tr><td>6</td><td><strong>Tests travel with the code</strong></td><td>No test-only PR, except to fill a coverage gap on code that is already merged.</td></tr><tr><td>7</td><td><strong>Title and description follow the templates</strong></td><td>Chapters 05 and 06. The first line of the description states the dependency and the size.</td></tr><tr><td>8</td><td><strong>New behaviour ships dark</strong></td><td>A PR that adds a capability must not change what users see until the final PR of the series turns it on.</td></tr></tbody></table></div><div class="main"><h2 id="rules-2">Status of enforcement</h2><p>Reviewers apply these rules by hand today. A CI size check and a <code>size-exception</code> label are <span class="tag a">PROPOSED</span> and not live yet. Until they exist, please run the command in chapter 03 before you open a PR and paste the number into the description.</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="count"><div class="chap-h"><div class="eyebrow">Measuring</div><h1><span class="no">03</span>How to count the lines</h1><p class="lede">Count added production lines only. Anyone can reproduce the number with one command.</p></div><div class="sec"><div class="main"><h2 id="count-1">The command</h2><p>Run from your branch, after fetching <code>master</code>:</p><pre>git fetch origin master
+git diff --numstat origin/master...HEAD -- . \
+  ':(exclude)*_test.go' ':(exclude)*.pb.go' ':(exclude)*.pb.gw.go' \
+  ':(exclude)*/seeds/*' ':(exclude)doc' ':(exclude)docs' ':(exclude)*.md' \
+  | awk '{a+=$1} END{print a" added production lines"}'</pre><p>Use the same pattern for the description line, for example <code>Production code: 241 added lines</code>.</p></div><div class="margin"><div class="mn ok"><b class="lb">Checked</b><p>The command was run against a real PR in this repository and returns the number of added lines outside the excluded paths.</p></div></div><div class="main"><h2 id="count-2">What counts</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>Counts</th><th>Does not count</th></tr></thead><tbody><tr><td>Go source, SQL migrations, <code>.proto</code> definitions, YAML and JSON config, scripts, CI workflows, Helm values</td><td>Files ending in <code>_test.go</code>; generated <code>*.pb.go</code> and <code>*.pb.gw.go</code>; seed data under <code>seeds/</code>; <code>doc/</code>, <code>docs/</code> and any <code>.md</code> file</td></tr></tbody></table></div><div class="main"><p>Only <strong>added</strong> lines are counted. Deleting code is cheap to review, so a PR that mostly deletes can be larger, but ask for an exception first.</p></div><div class="margin"></div><div class="main"><h2 id="count-3">Exceptions</h2><p>An exception needs a label <code>size-exception</code> and one sentence in the description saying why the change cannot be split. Reviewers may reject it. Accepted reasons:</p><ul class="pts"><li>A migration and the code that needs it must ship together to stay consistent.</li><li>A mechanical change with no logic, such as a rename across many files.</li><li>A pure deletion of dead code.</li></ul><p>Not accepted: "it is all related", "splitting takes too long", "the tests are big".</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="split"><div class="chap-h"><div class="eyebrow">Splitting</div><h1><span class="no">04</span>How to split a task</h1><p class="lede">Decide the split before writing code. Cut along seams that keep every PR safe on its own.</p></div><div class="sec"><div class="main"><h2 id="split-1">Five cuts that work</h2><ol class="seq"><li><b>Behaviour-neutral refactor first.</b><span>Move or rename code in one PR with no change in behaviour, then change behaviour in the next.</span></li><li><b>Add new code that nothing calls.</b><span>A new function or file with its tests. Safe to merge: it is dark.</span></li><li><b>Wire it in.</b><span>A small PR that connects the new code to its callers.</span></li><li><b>One service per PR.</b><span>Do not mix <code>quote</code>, <code>pm_perp</code> and <code>analytics</code> in one change unless it cannot be avoided.</span></li><li><b>Schema separate from use.</b><span>A migration that adds a nullable column ships first; code that reads it follows.</span></li></ol></div><div class="margin"></div><div class="main"><h2 id="split-2">Worked example: XRP-quoted perpetuals</h2><p>The XRP proposal splits into six groups and fifteen PRs. Sizes are estimates from call-site counts, not measurements; they are finalised after reading the code.</p></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>Group</th><th>#</th><th>Scope (planned)</th><th>Est. lines</th><th>Depends on</th></tr></thead><tbody><tr><td>A Margin grouping</td><td>[1/3]</td><td>Add per-asset grouping function and use it for account equity</td><td>~250</td><td>none</td></tr><tr><td></td><td>[2/3]</td><td>Apply it in the cross scanner and liquidation</td><td>~250</td><td>[1/3]</td></tr><tr><td></td><td>[3/3]</td><td>Add the <code>isolated_only</code> flag; order asset must equal quote asset</td><td>~200</td><td>none</td></tr><tr><td>B Transfers</td><td>[1/2]</td><td><code>is_collateral</code> column, migration, seed flag</td><td>~100</td><td>none</td></tr><tr><td></td><td>[2/2]</td><td>Replace the three transfer gates</td><td>~150</td><td>[1/2]</td></tr><tr><td>C Synthetic price</td><td>[1/3]</td><td>Derived market stage in quote: index and mark price</td><td>~300</td><td>none</td></tr><tr><td></td><td>[2/3]</td><td>Leg state inheritance, SAFE_MODE, guards</td><td>~250</td><td>[1/3]</td></tr><tr><td></td><td>[3/3]</td><td>Derived funding rate and freshness check</td><td>~250</td><td>[1/3]</td></tr><tr><td>D USD conversion</td><td>[1/4]</td><td>Convert fee and trade volume at trade time</td><td>~250</td><td>none</td></tr><tr><td></td><td>[2/4]</td><td>Add asset field to events; analytics funding and equity</td><td>~250</td><td>none</td></tr><tr><td></td><td>[3/4]</td><td>Referral and fee-engine conversion</td><td>~200</td><td>none</td></tr><tr><td></td><td>[4/4]</td><td>Insurance fund symbol parsing; remove hard-coded USDT</td><td>~100</td><td>none</td></tr><tr><td>E Risk controls</td><td>[1/2]</td><td>Per-market open-interest cap, reduce-only above it</td><td>~250</td><td>none</td></tr><tr><td></td><td>[2/2]</td><td>Negative-pool alert and automatic reduce-only</td><td>~200</td><td>[1/2]</td></tr><tr><td>F Launch</td><td>[1/1]</td><td>XRP assets, two INVISIBLE markets, risk tiers, quote config</td><td>~150</td><td>A to E</td></tr></tbody></table></div><div class="main"><p>Groups A to E have no effect in production until group F creates a market, so they can merge in any order that respects the dependency column. Migrations must merge in timestamp order (the migration lint requires a new version above the base maximum).</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="title"><div class="chap-h"><div class="eyebrow">Naming</div><h1><span class="no">05</span>How to name a pull request</h1><p class="lede">The squash-merge commit takes the PR title, so the title is what stays in history. Keep it short, specific and in the existing style.</p></div><div class="sec"><div class="main"><h2 id="title-1">Format</h2><pre>&lt;type&gt;(&lt;scope&gt;): [&lt;ticket&gt;] [&lt;n&gt;/&lt;N&gt;] &lt;imperative summary&gt;</pre><ul class="pts"><li><strong>type</strong>: <code>feat</code>, <code>fix</code>, <code>refactor</code>, <code>perf</code>, <code>test</code>, <code>docs</code>, <code>ci</code> or <code>chore</code>. This is already how the repository is written.</li><li><strong>scope</strong>: the service or area, for example <code>pm_perp</code>, <code>quote</code>, <code>analytics</code>, <code>trading-api</code>, <code>fee-engine</code>. Several scopes are separated by a comma.</li><li><strong>ticket</strong>: optional, for example <code>[YEN-3757]</code>.</li><li><strong>[n/N]</strong>: required when the PR belongs to a series, where N is the number of PRs in that group. This is new.</li><li><strong>summary</strong>: English, imperative mood ("add", "move", "apply"), no trailing period, and 72 characters or fewer for the whole title.</li></ul></div><div class="margin"><div class="mn"><b class="lb">Series</b><p>Number only within one group, for example group A of the XRP work is <code>[1/3]</code> to <code>[3/3]</code>. The group name goes in the scope or the summary so it can be found.</p></div></div><div class="main"><h2 id="title-2">Good and bad</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>Title</th><th>Verdict</th><th>Why</th></tr></thead><tbody><tr><td><code>feat(pm_perp): [1/3] group unrealized PnL by quote asset</code></td><td><span class="tag keep">GOOD</span></td><td>Type, scope, series marker, specific imperative summary.</td></tr><tr><td><code>feat(pm_perp,analytics): [YEN-3757] [2/4] add asset field to funding events</code></td><td><span class="tag keep">GOOD</span></td><td>Ticket and series marker together; two scopes because the change spans them.</td></tr><tr><td><code>feat: XRP perps (all changes)</code></td><td><span class="tag stop">BAD</span></td><td>No scope, no series, announces a giant PR.</td></tr><tr><td><code>fix(pm): wip</code></td><td><span class="tag stop">BAD</span></td><td>Says nothing about the change.</td></tr><tr><td><code>feat(quote): derived market and funding rate and freshness check</code></td><td><span class="tag stop">BAD</span></td><td>Three concerns in one title; split it.</td></tr><tr><td><code>Update margin_manager.go</code></td><td><span class="tag stop">BAD</span></td><td>Names a file, not a change; not in the type(scope) style.</td></tr></tbody></table></div></div></section>
+<section class="chapter" id="desc"><div class="chap-h"><div class="eyebrow">Template</div><h1><span class="no">06</span>The PR description</h1><p class="lede">The first line tells the reviewer how big the PR is and what it depends on, so they can decide in ten seconds whether to start.</p></div><div class="sec"><div class="main"><h2 id="desc-1">Template</h2><pre>Depends on: #1234   (or: none, can merge in any order)
+Production code: 241 added lines   (command in chapter 03)
+Series: group A margin grouping, 1 of 3
+
+## What
+One paragraph: what this PR changes and nothing else.
+
+## Why
+The reason, with a link to the design or ticket.
+
+## Safety
+What changes in production when this merges (ideally: nothing),
+and how it is verified.
+
+## Tests
+The tests added or changed, and the command to run them.
+
+## Not in this PR
+The follow-up PRs, so reviewers do not ask for them here.</pre></div><div class="margin"><div class="mn"><b class="lb">Language</b><p>Titles, descriptions, code comments and docs are English only.</p></div></div></div></section>
+<section class="chapter" id="series"><div class="chap-h"><div class="eyebrow">Working in a series</div><h1><span class="no">07</span>Working through a series</h1><p class="lede">A series is several small PRs that together deliver one task. Each one targets <code>master</code>. Keep a status table so everyone can see where it stands.</p></div><div class="sec"><div class="main"><h2 id="series-1">The status table</h2><p>The owner keeps two tables in the tracking issue: the PRs that are open, and the ones still planned. Update it whenever a PR opens or merges. Example format with illustrative numbers:</p></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>#</th><th>PR</th><th>Full title</th><th>Status</th></tr></thead><tbody><tr><td>[1/3]</td><td>#1801</td><td>feat(pm_perp): [1/3] group unrealized PnL by quote asset</td><td>Merged</td></tr><tr><td>[2/3]</td><td>#1805</td><td>feat(pm_perp): [2/3] apply per-asset margin to the cross scanner</td><td>In review</td></tr><tr><td>[3/3]</td><td>(not opened)</td><td>Planned: add the <code>isolated_only</code> flag and the order asset check</td><td>Planned</td></tr></tbody></table></div><div class="main"><p>For planned PRs write the scope only. The official title is set when the PR is opened.</p></div><div class="margin"></div><div class="main"><h2 id="series-2">Writing the next PR before the previous one merges</h2><p>You do not have to wait idle. Branch from the predecessor locally, write and test the next PR, and keep it unpublished. After the predecessor is squash-merged, move your branch onto <code>master</code> and open it:</p><pre>git fetch origin
+git rebase --onto origin/master &lt;last-commit-of-predecessor&gt; my-next-branch
+git push --force-with-lease -u origin my-next-branch
+gh pr create --base master</pre></div><div class="margin"><div class="mn"><b class="lb">Why not open it early</b><p>A PR whose base is another PR branch gets no CI here, and every squash-merge of the base forces a rebase. Opening it after the merge avoids both.</p></div></div><div class="main"><p>If the predecessor changes in review, rebase your local branch onto it again before you open yours. Keep at most one dependent PR written ahead.</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="review"><div class="chap-h"><div class="eyebrow">For reviewers</div><h1><span class="no">08</span>For reviewers</h1><p class="lede">Reviewers are expected to push back on size before reading the code.</p></div><div class="sec"><div class="main"><h2 id="review-1">What reviewers do</h2><ul class="pts"><li>If the description has no size line, ask for it.</li><li>If the number is above 300 and there is no approved exception, ask for a split. You do not need to review the code first.</li><li>If the PR does two things, ask for two PRs.</li><li>If a PR depends on something unmerged, ask the author to wait and open it after the merge.</li><li>Check the safety section: a PR in a series should change nothing in production unless it is the last one.</li></ul></div><div class="margin"></div></div></section>
+<section class="chapter" id="check"><div class="chap-h"><div class="eyebrow">Before you open</div><h1><span class="no">09</span>Checklist before opening a PR</h1><p class="lede">Tick every line. If one fails, fix it before opening.</p></div><div class="sec"><div class="main"><h2 id="check-1">Checklist</h2><ul class="check"><li>The size command shows 300 added lines or fewer, and the number is in the description.</li><li>The PR does one thing and the title does not need "and".</li><li>Base is <code>master</code>, and every dependency is already merged.</li><li>The title follows <code>type(scope): [n/N] summary</code>, in English.</li><li>The description starts with the dependency and size lines and has a Safety section.</li><li>Tests for this code are in the PR, and the tests pass locally.</li><li>Without the later PRs in the series, nothing changes for users.</li><li>Any migration version is above the current <code>master</code> maximum.</li></ul></div><div class="margin"></div></div></section>
+
+  <div class="foot">Facts about the repository (merge methods, which workflows run on which base branch) were checked in layer-3/neodax on 2026-11-19. Items marked PROPOSED are not enforced by CI yet.</div>
+</main>
+</div>
+
+<script>
+(function(){
+  var groups=[].slice.call(document.querySelectorAll('.toc .g'));
+  var map={};[].forEach.call(document.querySelectorAll('.toc a'),function(a){map[a.getAttribute('href').slice(1)]=a});
+  function setOn(id){
+    [].forEach.call(document.querySelectorAll('.toc a.on'),function(a){a.classList.remove('on')});
+    var a=map[id]; if(!a) return; a.classList.add('on');
+    var g=a.closest('.g'); groups.forEach(function(x){x.classList.toggle('open',x===g)});
+  }
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting) setOn(e.target.id||e.target.closest('.chapter').id); });
+  },{rootMargin:'-15% 0px -75% 0px'});
+  [].forEach.call(document.querySelectorAll('.chapter,.sec h2[id]'),function(s){io.observe(s)});
+})();
+</script>
+</body>
+</html>
