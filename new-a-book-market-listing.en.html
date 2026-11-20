@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeoDAX · Listing a new A-Book perpetual market</title>
+<style>
+.copy{position:relative}
+
+/* spec — long-form design proposal. Three columns on wide screens:
+   sticky TOC | reading column | margin column. Wide tables break out of the text
+   column. Revisions are first-class: ins/del marks, per-section "Updated" pills,
+   margin change notes, a changelog banner and a "since you last read" memory. */
+:root{
+  --bg:#FBFAF7; --card:#fff; --ink:#16181D; --ink2:#4A4D55; --ink3:#8A8C92;
+  --hair:#E4E2DB; --hair2:#EFEDE7; --chip:#F0EEE8; --accent:#1F2A44;
+  --amber:#97690A; --amber-bg:#FBF1DC;
+  --ins:#E3F1E8; --ins-b:#2E7D4F; --del:#F8E3E0; --del-b:#C0392B;
+  --new:#EEE9FB; --new-b:#6A3FB5;
+  --serif:"Noto Serif SC","Songti SC","Source Han Serif SC",Georgia,serif;
+  --sans:Inter,"PingFang SC","Noto Sans SC","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 var(--sans)}
+code{font:.86em var(--mono);background:var(--chip);padding:1px 6px;border-radius:3px}
+a{color:var(--accent)}
+/* top bar + changelog banner */
+.bar{position:sticky;top:0;z-index:20;background:rgba(251,250,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar .in{max-width:1560px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:18px}
+.logo{font:600 22px var(--serif)}
+.crumb{padding-left:18px;border-left:1px solid var(--hair);color:var(--ink2);font-size:14px}
+.sp{flex:1}
+.pill{font:600 12px var(--sans);padding:2px 10px;border-radius:99px;background:var(--amber-bg);color:var(--amber);border:1px solid #EBD6A6}
+.lang{font-size:14px;color:var(--ink2);text-decoration:none;border:1px solid var(--hair);border-radius:4px;padding:3px 12px;background:var(--card)}
+.banner{background:var(--amber-bg);border-bottom:1px solid #EBD6A6}
+.banner .in{max-width:1560px;margin:0 auto;padding:12px 32px;display:flex;gap:22px;align-items:center;flex-wrap:wrap;font-size:14px}
+.banner b{font-weight:700}
+.tog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink2);user-select:none}
+.tog input{accent-color:var(--accent)}
+.btn{border:1px solid #D9C48F;background:#fff;border-radius:4px;padding:3px 12px;font:13px var(--sans);cursor:pointer;color:var(--ink)}
+.chg-list{display:none;max-width:1560px;margin:0 auto;padding:0 32px 14px}
+.chg-list.open{display:block}
+.chg-list table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #EBD6A6}
+.chg-list th,.chg-list td{padding:6px 12px;border-bottom:1px solid var(--hair2);text-align:left}
+.chg-list th{background:#FFF8E8;font-weight:600}
+/* shell */
+.shell{max-width:1560px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.toc{position:sticky;top:112px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding:28px 0}
+.toc .k{font-size:12px;letter-spacing:.08em;color:var(--ink3);margin-bottom:10px}
+.toc a.c,.toc a.s{display:flex;justify-content:space-between;gap:8px;align-items:center;text-decoration:none;color:var(--ink2);font-size:14px;line-height:1.5;padding:6px 10px 6px 12px;border-left:2px solid var(--hair)}
+.toc a:hover{color:var(--ink);background:var(--hair2)}
+.toc a.on,.toc .g.open>a.c{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--card)}
+.toc a .no{font:12px var(--mono);color:var(--ink3);margin-right:8px}
+.toc .b{font:700 10px var(--sans);padding:1px 6px;border-radius:99px;background:var(--ins);color:var(--ins-b);flex-shrink:0}
+.toc .b.new{background:var(--new);color:var(--new-b)}
+body.only-changed .toc a:not([data-ch]){display:none}
+/* article */
+.hero{padding:44px 0 26px;border-bottom:2px solid var(--ink)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.14em;color:var(--amber)}
+.hero h1{margin:8px 0 8px;font:500 40px/1.25 var(--serif);letter-spacing:.3px}
+.hero p{margin:0;max-width:760px;color:var(--ink2);font-size:17px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.chip{background:var(--chip);border:1px solid var(--hair);border-radius:3px;padding:2px 11px;font:13px var(--mono);color:var(--ink2)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:36px;margin:28px 0 8px}
+.kpi{border-top:2px solid var(--ink);padding-top:12px}
+.kpi .k{font-size:13px;color:var(--ink2)} .kpi .v{font:500 34px/1.4 var(--serif)} .kpi .v small{font:14px var(--serif);color:var(--ink2);margin-left:4px}
+/* section = reading column + margin column; .wide spans both */
+.chapter{position:relative;padding:44px 0 20px;border-bottom:1px solid var(--hair)}
+.chap-h{margin-bottom:6px;max-width:900px}
+.chap-h .eyebrow{font:600 12px var(--sans);letter-spacing:.12em;color:var(--amber);text-transform:uppercase}
+.chap-h h1{margin:6px 0 10px;font:500 34px/1.3 var(--serif)}
+.chap-h h1 .no{font:16px var(--mono);color:var(--ink3);margin-right:14px}
+.chap-h .lede{margin:0 0 6px}
+.sec{display:grid;grid-template-columns:minmax(0,720px) minmax(240px,1fr);column-gap:48px;padding:6px 0 4px;position:relative}
+.sec>.main{grid-column:1}
+.sec>.margin{grid-column:2;padding-top:6px}
+.sec>.wide{grid-column:1/-1;margin:8px 0 8px;overflow-x:auto;background:var(--card);border:1px solid var(--hair);border-radius:6px}
+.sec h2{margin:26px 0 8px;font:500 23px/1.4 var(--serif)}
+.sec h2 .no{font:15px var(--mono);color:var(--ink3);margin-right:12px}
+.sec h3{margin:26px 0 6px;font:600 16px var(--sans)}
+.sec p{margin:0 0 14px}
+.lede{font-size:17px;color:var(--ink2)}
+pre{background:#16181F;color:#E8E6DF;border-radius:6px;padding:14px 18px;overflow:auto;font:13px/1.8 var(--mono);margin:12px 0 16px}
+pre .c{color:#8A8C92}
+/* margin notes */
+.mn{font-size:13px;line-height:1.65;color:var(--ink2);border-left:2px solid var(--hair);padding:2px 0 2px 14px;margin:0 0 18px}
+.mn b.lb{display:block;font-size:11px;letter-spacing:.08em;color:var(--ink3);margin-bottom:2px}
+.mn.chg{border-left-color:var(--ins-b);background:linear-gradient(90deg,#F2F9F5,transparent)}
+.mn.chg b.lb{color:var(--ins-b)}
+.mn.todo{border-left-color:var(--amber)} .mn.todo b.lb{color:var(--amber)}
+/* revision markup */
+.pillrev{display:inline-block;vertical-align:middle;margin-left:14px;font:700 11px var(--sans);letter-spacing:.04em;padding:2px 9px;border-radius:99px;background:var(--ins);color:var(--ins-b)}
+.pillrev.new{background:var(--new);color:var(--new-b)}
+.chapter.upd::before{content:"";position:absolute;left:-18px;top:48px;bottom:28px;width:3px;border-radius:3px;background:var(--ins-b);opacity:0}
+.chapter.upd.fresh::before{opacity:1}
+.chapter.upd.fresh.isnew::before{background:var(--new-b)}
+body:not(.show-changes) .pillrev,body:not(.show-changes) .chapter.upd::before{display:none}
+ins{text-decoration:none;background:var(--ins);border-bottom:2px solid var(--ins-b);padding:0 2px}
+del{background:var(--del);color:var(--del-b);text-decoration:line-through;padding:0 2px}
+body:not(.show-changes) ins{background:none;border-bottom:0}
+body:not(.show-changes) del{display:none}
+body.hide-del del{display:none}
+body.only-changed .chapter:not(.upd){display:none}
+/* tables */
+table.t{width:100%;border-collapse:collapse;font-size:14px;line-height:1.6}
+table.t th{position:sticky;top:0;background:#FAF9F5;text-align:left;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--ink);white-space:nowrap}
+table.t td{padding:10px 14px;border-bottom:1px solid var(--hair2);vertical-align:top;min-width:160px}
+table.t td:first-child,table.t th:first-child{position:sticky;left:0;background:#fff;font-weight:600;min-width:130px;border-right:1px solid var(--hair2);z-index:1}
+table.t tr:hover td{background:#FDFCF8} table.t tr:hover td:first-child{background:#FDFCF8}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.note{border:1px solid var(--hair);background:var(--card);border-radius:6px;padding:12px 16px;margin:14px 0}
+.note h4{margin:0 0 4px;font-size:13px;color:var(--ink3);letter-spacing:.06em}
+.foot{padding:40px 0 80px;color:var(--ink3);font-size:13px}
+@media(max-width:1200px){.shell{grid-template-columns:1fr}.toc{display:none}.sec{grid-template-columns:minmax(0,1fr)}.sec>.margin{grid-column:1;order:3;padding-top:0}}
+@media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:30px}}
+@media print{.bar,.banner,.toc{display:none}.shell{display:block}ins,del{print-color-adjust:exact}}
+
+.toc .subs{display:none;margin:2px 0 6px 14px}
+.toc .g.open .subs{display:block}
+.toc a.s{font-size:13px;padding:3px 10px 3px 12px;color:var(--ink3);border-left:2px solid var(--hair)}
+.toc a.s.on{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:none}
+.toc a.c.on2{}
+body.only-changed .toc .g:not(.chg){display:none}
+.mono{font:.86em var(--mono)}
+td.mono{font:12.5px/22.4px var(--mono)}
+.small{font-size:13px;color:var(--ink3)}
+.lede code,.chap-h code{white-space:nowrap}
+.tag{display:inline-block;font:500 .72em var(--mono);padding:1px .6em;border-radius:4px;vertical-align:1px;white-space:nowrap}
+.tag.a{background:var(--amber-bg);color:var(--amber)}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.mn.ok{border-left-color:var(--ins-b)} .mn.ok b.lb{color:var(--ins-b)}
+.mn.warn{border-left-color:var(--del-b)} .mn.warn b.lb{color:var(--del-b)}
+.mn p{margin:0 0 6px}
+.cards{display:grid;grid-template-columns:1fr;gap:12px;margin:16px 0}
+.card{background:var(--card);border:1px solid var(--hair);border-left:3px solid var(--ink3);border-radius:8px;padding:12px 16px;font-size:14px;line-height:1.7;color:var(--ink2)}
+.card b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.card.hot{border-left-color:var(--amber)}.card.risk{border-left-color:var(--del-b)}.card.evt{border-left-color:var(--ins-b)}
+ul.gate,ul.check,ol.seq{list-style:none;margin:16px 0;padding:0}
+ul.gate li,ul.check li,ol.seq li{position:relative;border-top:1px solid var(--hair);font-size:14.5px;color:var(--ink2);line-height:1.7}
+ul.gate li:last-child,ul.check li:last-child,ol.seq li:last-child{border-bottom:1px solid var(--hair)}
+ul.gate li{padding:10px 0 10px 84px}ul.gate li .tag{position:absolute;left:0;top:13px}
+ul.check li{padding:10px 0 10px 30px}
+ul.check li::before{content:"";position:absolute;left:2px;top:16px;width:12px;height:12px;border:1.5px solid #CFCCC2;border-radius:3px;background:var(--card)}
+ol.seq{counter-reset:step}
+ol.seq li{counter-increment:step;padding:14px 0 12px 44px}
+ol.seq li::before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:16px;font:12px var(--mono);color:var(--amber)}
+ol.seq b{display:block;font-weight:600;color:var(--ink);margin-bottom:2px}
+ol.seq span{display:block;font-size:14px}
+.prs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+a.pr{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;padding:3px 10px;border:1px solid #EBD6A6;border-radius:6px;background:var(--amber-bg);color:var(--amber);text-decoration:none}
+a.pr .n{font:500 12px var(--mono)}a.pr .st{font:10.5px var(--mono);color:var(--ink3)}
+span.pr-todo{display:inline-block;font-size:12.5px;padding:3px 10px;border:1px dashed #CFCCC2;border-radius:6px;color:var(--ink3)}
+.prtable td,table.t td{white-space:normal}
+details.sql{border:1px solid var(--hair);border-radius:6px;margin:12px 0;background:var(--card)}
+details.sql summary{padding:8px 14px;cursor:pointer}
+.mn.inl{border:1px solid var(--hair);border-left-width:3px;background:var(--card);border-radius:6px;padding:12px 18px;font-size:14.5px;margin:6px 0 14px}
+ul.pts{list-style:none;margin:10px 0 14px;padding:0}
+ul.pts li{position:relative;padding:5px 0 5px 22px;color:var(--ink2)}
+ul.pts li::before{content:"";position:absolute;left:6px;top:15px;width:5px;height:5px;border-radius:50%;background:var(--amber)}
+ol.seq li{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="in"><div class="logo">Yellow<i style="font-style:normal">.</i></div><div class="crumb">Operations · New A-Book market</div><div class="sp"></div><span class="pill">v1 · for the team</span></div></div>
+
+<div class="shell">
+<nav class="toc" id="toc">
+  <div class="k">CONTENTS</div>
+  <div class="g" data-c="scope"><a class="c" href="#scope"><span><span class="no">01</span>Read this first</span></a><div class="subs"><a class="s" href="#scope-1">What &quot;A-Book&quot; means for a new market</a><a class="s" href="#scope-2">ANTUSDT on Binance (snapshot 2026-11-20 01:51 UTC)</a></div></div><div class="g" data-c="pre"><a class="c" href="#pre"><span><span class="no">02</span>Before release day</span></a><div class="subs"><a class="s" href="#pre-1">Gates</a><a class="s" href="#pre-2">Snapshot Binance parameters</a><a class="s" href="#pre-3">Owners and prerequisites</a></div></div><div class="g" data-c="seed"><a class="c" href="#seed"><span><span class="no">03</span>Parameters and seed</span></a><div class="subs"><a class="s" href="#seed-1">The market row</a><a class="s" href="#seed-2">Create the market through the Admin API, not SQL alone</a><a class="s" href="#seed-3">Risk tiers from the leverage bracket</a></div></div><div class="g" data-c="config"><a class="c" href="#config"><span><span class="no">04</span>Config PR</span></a><div class="subs"><a class="s" href="#config-1">What to change</a><a class="s" href="#config-2">Displayed volume multiplier (optional)</a><a class="s" href="#config-3">Quote capacity</a></div></div><div class="g" data-c="deploy"><a class="c" href="#deploy"><span><span class="no">05</span>Deploy and verify</span></a><div class="subs"><a class="s" href="#deploy-1">Order of steps</a><a class="s" href="#deploy-2">FROZEN acceptance</a></div></div><div class="g" data-c="open"><a class="c" href="#open"><span><span class="no">06</span>Open the market</span></a><div class="subs"><a class="s" href="#open-1">Open</a><a class="s" href="#open-2">Canary</a><a class="s" href="#open-3">Observe</a></div></div><div class="g" data-c="rollback"><a class="c" href="#rollback"><span><span class="no">07</span>Rollback</span></a><div class="subs"><a class="s" href="#rollback-1">Steps</a></div></div><div class="g" data-c="gaps"><a class="c" href="#gaps"><span><span class="no">08</span>Gap checklist</span></a><div class="subs"><a class="s" href="#gaps-1">Does your instruction cover these?</a><a class="s" href="#gaps-2">Open items for this listing</a></div></div>
+</nav>
+<main>
+<header class="hero" id="top"><div class="eyebrow">OPERATIONS · NEODAX · A-BOOK</div><h1>Listing a New A-Book Perpetual Market</h1><p>One procedure for every new Binance-hedged market, with <strong>ANTUSDT-PERP</strong> as the worked example. The market is created FROZEN, five config files change, five services restart, and it is opened once every check has passed.</p><div class="chips"><span class="chip">v1</span><span class="chip">2026-11-20</span><span class="chip">production · aws branch</span></div><div class="kpis"><div class="kpi"><div class="k">Config files</div><div class="v">5</div></div><div class="kpi"><div class="k">Services to restart</div><div class="v">5</div></div><div class="kpi"><div class="k">Open inputs</div><div class="v">4</div></div><div class="kpi"><div class="k">Markets at a time</div><div class="v">1</div></div></div></header>
+<section class="chapter" id="scope"><div class="chap-h"><div class="eyebrow">Scope and ANTUSDT facts</div><h1><span class="no">01</span>Read this first</h1><p class="lede">This is the procedure for listing one new market that is executed as A-Book: users trade on NeoDAX, the market maker hedges on Binance. ANTUSDT-PERP is the worked example, and every value was read from Binance on 2026-11-20.</p></div><div class="sec"><div class="main"><h2 id="scope-1">What &quot;A-Book&quot; means for a new market</h2><p>A new A-Book market is born A-Book. There is <strong>no book switch</strong>, no <code>marketctl book-switch</code>, and it is never added to a Finex shard. Execution goes through the MM connector to Binance, and quote mirrors Binance market data. The market is created <strong>FROZEN</strong> and opened only after every check passes.</p><ul class="pts"><li>Mark price, order book, trades, klines and ticker all come from the same Binance symbol. The A-Book mark source weight is Binance 1.0 only.</li><li>Margin mode is isolated only.</li><li>One market at a time: validate while FROZEN, open it, observe, then the next one.</li></ul></div><div class="margin"><div class="mn ok"><b class="lb">Source</b><p>Mechanism and order are taken from the 14-market rollout runbook (2026-10-14, rev 2 of 2026-10-27) and re-checked against the production <code>aws</code> branch of neodax-apps-value on 2026-11-20.</p></div></div><div class="main"><h2 id="scope-2">ANTUSDT on Binance (snapshot 2026-11-20 01:51 UTC)</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>Field</th><th>Value</th><th>Why it matters</th></tr></thead><tbody><tr><td>Symbol / status</td><td><code>ANTUSDT</code> · <code>TRADING</code></td><td>Gate: anything other than TRADING stops the release.</td></tr><tr><td>Contract type</td><td><code>TRADIFI_PERPETUAL</code>, underlying <code>EQUITY</code></td><td>Use the TradFi funding template (cap 0.02, interest 0), not the crypto one.</td></tr><tr><td>Onboarded</td><td>2026-11-17 06:00 UTC</td><td>Renamed from the pre-IPO contract <code>ANTHROPICUSDT</code>.</td></tr><tr><td>Old contract</td><td><code>ANTHROPICUSDT</code> is <code>SETTLING</code> (delivery 2026-11-17 11:00 UTC)</td><td>Must not appear anywhere in config, seed or MM settings.</td></tr><tr><td>Tick / step / min qty</td><td><code>0.01000</code> / <code>0.01</code> / <code>0.01</code></td><td>Strings are copied as is. See the precision rule in chapter 03.</td></tr><tr><td>Max qty (LOT / MARKET)</td><td>15000 / 5000</td><td>Seed <code>max_qty</code> takes the LOT value.</td></tr><tr><td>Min notional · price band</td><td>5 · 0.97 to 1.03</td><td>PERCENT_PRICE filter.</td></tr><tr><td>Funding</td><td>every 8 h · cap ±0.02 · interest 0</td><td>From <code>fundingInfo</code> and <code>premiumIndex</code>, not from announcements.</td></tr><tr><td>Liquidation fee</td><td>0.015</td><td>From <code>exchangeInfo</code>.</td></tr><tr><td>Mark price · 24 h quote volume</td><td>92.50 · about 3.22 B USDT</td><td>Used to size the displayed-volume multiplier (chapter 04).</td></tr><tr><td>OKX / Bybit</td><td>OKX: not listed · Bybit: listed</td><td>Not used. A-Book is Binance only, and the OKX/Bybit mark collectors are disabled in prod.</td></tr></tbody></table></div><div class="main"><div class="mn inl"><b class="lb">Not verified</b><p>The contract was renamed and its size adjusted on 2026-11-17 according to press reports. The Binance announcement itself was not found, so ask the MM team to confirm the hedge line is on <code>ANTUSDT</code> and that nothing still points at the old name.</p></div></div><div class="margin"></div></div></section>
+<section class="chapter" id="pre"><div class="chap-h"><div class="eyebrow">Gates and owners</div><h1><span class="no">02</span>Before release day</h1><p class="lede">Nothing below changes production. Each gate has an owner, and a failed gate stops the release.</p></div><div class="sec"><div class="main"><h2 id="pre-1">Gates</h2><ul class="gate"><li><span class="tag stop">STOP</span>Binance status is not <code>TRADING</code>, or contract type is not as expected.</li><li><span class="tag stop">STOP</span>Seed values differ from the release-day snapshot (tick, step, min, max, notional, price band, funding, interest, liquidation fee).</li><li><span class="tag stop">STOP</span>No leverage bracket, tiers not strictly increasing, or <code>max_net_notional</code> above the tier-1 notional cap.</li><li><span class="tag stop">STOP</span>The Binance execution account has no trading permission, no isolated setting, or not enough margin for <code>ANTUSDT</code>.</li><li><span class="tag stop">STOP</span>The A-Book House account is missing (see 02-3).</li><li><span class="tag a">RECORD</span>Raw JSON, extracted table, SHA-256 and reviewer are attached to the release ticket.</li></ul></div><div class="margin"></div><div class="main"><h2 id="pre-2">Snapshot Binance parameters</h2><p>Public endpoints. Keep the raw files, the UTC time and the hashes.</p><pre>curl -fsS &#x27;https://fapi.binance.com/fapi/v1/exchangeInfo&#x27; -o exchangeInfo.json
+curl -fsS &#x27;https://fapi.binance.com/fapi/v1/fundingInfo&#x27;  -o fundingInfo.json
+curl -fsS &#x27;https://fapi.binance.com/fapi/v1/premiumIndex?symbol=ANTUSDT&#x27; -o premiumIndex.json
+shasum -a 256 exchangeInfo.json fundingInfo.json premiumIndex.json</pre><p>The leverage bracket is a signed read-only call and is <strong>not</strong> in the public API. The owner of the execution account runs it with a read-only key, and the response is not posted to public channels:</p><pre>GET /fapi/v1/leverageBracket?symbol=ANTUSDT&amp;timestamp=&lt;ms&gt;&amp;signature=&lt;HMAC&gt;</pre></div><div class="margin"><div class="mn warn"><b class="lb">Production key</b><p>If staging and production use different execution accounts, the bracket must be fetched with the <strong>production</strong> account. A staging snapshot does not count.</p></div></div><div class="main"><h2 id="pre-3">Owners and prerequisites</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>Item</th><th>Owner</th><th>Check</th></tr></thead><tbody><tr><td>Binance hedge line for <code>ANTUSDT</code> on the main account</td><td>MM team</td><td>Trading permission, isolated margin, enough margin for the full <code>max_net_notional</code>.</td></tr><tr><td><code>mm_address</code> (absolute http/https URL) and <code>max_net_notional</code></td><td>MM team + risk</td><td>The URL is validated when the market is created. The notional must not exceed the tier-1 cap or the connector global limit.</td></tr><tr><td>MM service symbol list</td><td>MM team</td><td>Contains <code>ANTUSDT</code>.</td></tr><tr><td>A-Book House account in PM Perp and Raft</td><td>DevOps</td><td>Leader log shows <code>[SYSTEM_ACCOUNTS] all system accounts verified present in FSM</code>. If not, stop and run the repair in the rollout runbook (section 4.2).</td></tr><tr><td>Running images include A-Book support</td><td>DevOps</td><td>Prod config already lists A-Book markets (XAU, ARB, UNI, AAVE, GOOGL and the converted majors). Confirm the deployed images, not just the config.</td></tr><tr><td>Alerts</td><td>DevOps</td><td>Connector disconnected, reconciliation diff, house invariant, liquidation timeout and margin ratio alerts reach on-call.</td></tr><tr><td>Frontend and market metadata</td><td>Frontend / product</td><td>TODO: not checked here. Confirm the market list, icon and symbol display for ANT.</td></tr></tbody></table></div></div></section>
+<section class="chapter" id="seed"><div class="chap-h"><div class="eyebrow">What goes into the database</div><h1><span class="no">03</span>Parameters and seed</h1><p class="lede">One market row and its risk tiers. Values from Binance are copied, values from platform policy are fixed, and values that need a person are marked.</p></div><div class="sec"><div class="main"><h2 id="seed-1">The market row</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>Field</th><th>ANTUSDT-PERP</th><th>Source</th></tr></thead><tbody><tr><td>symbol · base · quote</td><td><code>ANTUSDT-PERP</code> · <code>ANT</code> · <code>USDT</code></td><td>Naming rule.</td></tr><tr><td>status</td><td><code>active</code></td><td>Row is visible to services; trading is gated by FROZEN.</td></tr><tr><td>execution_book · desired_execution_book</td><td><code>A_BOOK</code> · <code>A_BOOK</code></td><td>Born A-Book.</td></tr><tr><td>binance_symbol</td><td><code>ANTUSDT</code></td><td>Not <code>ANTHROPICUSDT</code>.</td></tr><tr><td>routing_state · route_version</td><td><code>ACTIVE</code> · <code>1</code></td><td>Initial values.</td></tr><tr><td>operational_state · reason</td><td><code>FROZEN</code> · <code>pre-launch validation</code></td><td>Opened later through the A-Book state API.</td></tr><tr><td>maker_fee_rate · taker_fee_rate</td><td><code>0.0002</code> · <code>0.0005</code></td><td>Platform policy.</td></tr><tr><td>amount_precision · step_size · min_qty</td><td><code>2</code> · <code>'0.01'</code> · <code>'0.01'</code></td><td>Binance filters.</td></tr><tr><td>price_precision · tick_size</td><td><code>5</code> · <code>'0.01000'</code></td><td>Binance filter. Precision must equal the number of characters after the dot in the tick string.</td></tr><tr><td>max_qty · min_notional</td><td><code>'15000'</code> · <code>'5'</code></td><td>LOT_SIZE.maxQty and MIN_NOTIONAL.</td></tr><tr><td>price_min_ratio · price_max_ratio</td><td><code>0.97</code> · <code>1.03</code></td><td>PERCENT_PRICE.</td></tr><tr><td>depth_level</td><td><code>["0.01","0.1","1","10"]</code></td><td>Tick × 1, 10, 100, 1000.</td></tr><tr><td>funding_interval_seconds</td><td><code>28800</code></td><td>Live <code>fundingInfo</code>: 8 h.</td></tr><tr><td>max_funding_rate_per_int · interest_rate_per_interval</td><td><code>0.020</code> · <code>0</code></td><td>TradFi template, same as NVDA and the other equities.</td></tr><tr><td>mark_price_min_sources_normal</td><td><code>1</code></td><td>Always 1. Never 2 or 3 (SAFE_MODE history).</td></tr><tr><td>maintenance_margin_rate · max_allowed_leverage</td><td><code>__TIER1_MMR__</code> · <code>__TIER1_LEVERAGE__</code></td><td>Tier 1 of the signed leverage bracket, as returned.</td></tr><tr><td>market_order_margin_buffer</td><td><code>__TIER1_MMR__</code></td><td>Equal to the tier-1 maintenance margin rate.</td></tr><tr><td>mm_address</td><td><code>__MM_ADDRESS__</code></td><td>From the MM team. Do not reuse the staging value.</td></tr><tr><td>max_net_notional</td><td><code>__MAX_NET_NOTIONAL__</code></td><td>Risk decision. At most the tier-1 notional cap. Equity markets so far used 50000.</td></tr><tr><td>liquidation_timeout_seconds · external_funding_wait_seconds</td><td><code>600</code> · <code>120</code></td><td>Platform A-Book defaults.</td></tr><tr><td>liquidation_fee_rate</td><td><code>0.015</code></td><td>Binance <code>liquidationFee</code>.</td></tr></tbody></table></div><div class="main"><p>The four <code>__PLACEHOLDER__</code> values are the only open inputs. The release must not start while any of them is unresolved.</p></div><div class="margin"></div><div class="main"><h2 id="seed-2">Create the market through the Admin API, not SQL alone</h2><p>The Admin API writes the row through the Raft state machine and publishes <code>CommandMarketSync</code>, so every component learns about the market. Direct SQL only inserts the row. The 2026-10-27 ARB incident came from stopping at SQL.</p><ol class="seq"><li><b>Create the base asset if it is missing.</b><span><code>POST /perpetual/asset</code> with symbol <code>ANT</code>, or the idempotent SQL below.</span></li><li><b>Create the market.</b><span><code>POST /perpetual/market</code> with the field values above. Later edits use <code>PUT /perpetual/market</code>.</span></li><li><b>Confirm the state before anything else.</b><span><code>GET /perpetual/market/ANTUSDT-PERP/a-book/status</code> must show A_BOOK, routing ACTIVE and operational state FROZEN.</span></li><li><b>Confirm the connector saw it.</b><span>The <code>mm_connector</code> log shows <code>A-Book market sync processed</code> with <code>added=1</code> for this market. Confirm Finex does not hold it.</span></li><li><b>Write the risk tiers.</b><span>SQL, executed by DevOps. See 03-3.</span></li></ol></div><div class="margin"></div><div class="main"><details class="sql"><summary>Reference: the equivalent SQL (fallback and review artifact)</summary><pre>-- Base asset (idempotent)
+INSERT INTO portfolio_manager_perp.perps_assets
+    (symbol, name, decimals, is_active, is_stablecoin, created_at)
+VALUES (&#x27;ANT&#x27;, &#x27;Anthropic (tokenized stock)&#x27;, 18, true, false, NOW())
+ON CONFLICT (symbol) DO NOTHING;
+
+-- Market row: same column list and ON CONFLICT block as
+-- portfolio_manager_perp/seeds/20261006150000_nvdausdt_perp.sql
+INSERT INTO portfolio_manager_perp.perps_markets (
+    symbol, base_asset, quote_asset, status,
+    maker_fee_rate, taker_fee_rate, amount_precision, price_precision,
+    price_min_ratio, price_max_ratio, step_size, tick_size, min_qty, max_qty,
+    min_notional, depth_level, maintenance_margin_rate, max_allowed_leverage,
+    funding_interval_seconds, max_funding_rate_per_int, interest_rate_per_interval,
+    mark_price_min_sources_normal, execution_book, binance_symbol, mm_address,
+    max_net_notional, routing_state, routing_failure_code, operational_state,
+    operational_reason, route_version, desired_execution_book,
+    market_order_margin_buffer, liquidation_timeout_seconds,
+    external_funding_wait_seconds, liquidation_fee_rate, created_at, updated_at
+) VALUES (
+    &#x27;ANTUSDT-PERP&#x27;, &#x27;ANT&#x27;, &#x27;USDT&#x27;, &#x27;active&#x27;,
+    0.0002, 0.0005, 2, 5,
+    0.97, 1.03, &#x27;0.01&#x27;, &#x27;0.01000&#x27;, &#x27;0.01&#x27;, &#x27;15000&#x27;,
+    &#x27;5&#x27;, &#x27;[&quot;0.01&quot;,&quot;0.1&quot;,&quot;1&quot;,&quot;10&quot;]&#x27;, __TIER1_MMR__, __TIER1_LEVERAGE__,
+    28800, 0.020, 0,
+    1, &#x27;A_BOOK&#x27;, &#x27;ANTUSDT&#x27;, &#x27;__MM_ADDRESS__&#x27;,
+    __MAX_NET_NOTIONAL__, &#x27;ACTIVE&#x27;, &#x27;&#x27;, &#x27;FROZEN&#x27;,
+    &#x27;pre-launch validation&#x27;, 1, &#x27;A_BOOK&#x27;,
+    __TIER1_MMR__, 600,
+    120, 0.015, NOW(), NOW()
+);</pre></details></div><div class="margin"><div class="mn warn"><b class="lb">Iron rule</b><p>If SQL was used, re-apply the same row through the Admin API and check the <code>added=1</code> log line before moving on.</p></div></div><div class="main"><h2 id="seed-3">Risk tiers from the leverage bracket</h2><p>Rules: <code>notionalCap</code> becomes <code>max_position_qty</code>, <code>initialLeverage</code> becomes <code>max_leverage</code>, <code>initial_margin_rate = 1 / initialLeverage</code>, and <code>maintenance_margin_rate = maintMarginRatio × 2</code> for tier 2 and above. Tier 1 is used as returned. Doubling the rate makes our liquidation fire before Binance liquidates the hedge.</p><p>The script below applies these rules. It was run against the published XAUUSDT bracket and reproduced all 10 rows of the published seed.</p></div><div class="margin"></div><div class="main"><details class="sql"><summary>Script: bracket_to_sql.py</summary><pre>#!/usr/bin/env python3
+&quot;&quot;&quot;Turn a Binance leverageBracket response into perps_market_risk_tiers SQL.
+
+usage: bracket_to_sql.py &lt;leverageBracket.json&gt; &lt;INTERNAL_SYMBOL, e.g. ANTUSDT-PERP&gt;
+Rules: notionalCap -&gt; max_position_qty, initialLeverage -&gt; max_leverage,
+initial_margin_rate = 1/initialLeverage (8 dp), maintenance_margin_rate =
+maintMarginRatio x 2 for tier 2 and above, tier 1 as returned.
+&quot;&quot;&quot;
+import json, sys
+from decimal import Decimal, ROUND_HALF_UP
+
+def num(x):
+    s = format(Decimal(str(x)).normalize(), &#x27;f&#x27;)
+    return s
+
+def main(path, symbol):
+    data = json.load(open(path))
+    entry = data[0] if isinstance(data, list) else data
+    brackets = sorted(entry[&quot;brackets&quot;], key=lambda b: b[&quot;bracket&quot;])
+    prev = Decimal(0)
+    rows = []
+    for b in brackets:
+        cap = Decimal(str(b[&quot;notionalCap&quot;]))
+        assert cap &gt; prev, &quot;tiers must strictly increase by notional cap&quot;
+        prev = cap
+        lev = Decimal(str(b[&quot;initialLeverage&quot;]))
+        imr = (Decimal(1) / lev).quantize(Decimal(&quot;0.00000001&quot;), ROUND_HALF_UP)
+        mmr = Decimal(str(b[&quot;maintMarginRatio&quot;]))
+        if b[&quot;bracket&quot;] &gt; 1:
+            mmr *= 2
+        rows.append(&quot;    (&#x27;%s&#x27;, %d, %s, %s, %s, %s, 1, NOW(), NOW())&quot; % (
+            symbol, b[&quot;bracket&quot;], num(cap), num(lev), num(imr), num(mmr)))
+    print(&quot;INSERT INTO portfolio_manager_perp.perps_market_risk_tiers (\n&quot;
+          &quot;    symbol, tier_index, max_position_qty, max_leverage,\n&quot;
+          &quot;    initial_margin_rate, maintenance_margin_rate,\n&quot;
+          &quot;    config_version, created_at, updated_at\n)\nVALUES&quot;)
+    print(&quot;,\n&quot;.join(rows))
+    print(&quot;ON CONFLICT (symbol, tier_index) DO UPDATE SET\n&quot;
+          &quot;    max_position_qty = EXCLUDED.max_position_qty,\n&quot;
+          &quot;    max_leverage = EXCLUDED.max_leverage,\n&quot;
+          &quot;    initial_margin_rate = EXCLUDED.initial_margin_rate,\n&quot;
+          &quot;    maintenance_margin_rate = EXCLUDED.maintenance_margin_rate,\n&quot;
+          &quot;    config_version = EXCLUDED.config_version,\n&quot;
+          &quot;    updated_at = NOW();&quot;)
+
+if __name__ == &quot;__main__&quot;:
+    main(sys.argv[1], sys.argv[2])</pre></details></div><div class="margin"></div><div class="main"><pre>python3 bracket_to_sql.py leverageBracket.json ANTUSDT-PERP &gt; ant_risk_tiers.sql</pre><p>Review the generated rows against the raw response, then DevOps runs the file. The tier-1 values also fill the three <code>__TIER1_*__</code> placeholders above. PM Perp re-reads market definitions every minute, so allow about 70 seconds before the next check.</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="config"><div class="chap-h"><div class="eyebrow">neodax-apps-value, base branch aws</div><h1><span class="no">04</span>Config PR</h1><p class="lede">One PR. Five files. Entries are found by key name, not by line number, because the files change often.</p></div><div class="sec"><div class="main"><h2 id="config-1">What to change</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>File (under neodax-nacos/prod unless noted)</th><th>Key</th><th>Add</th></tr></thead><tbody><tr><td><code>neodax-kafka-topic-provision/prod/values.yaml</code></td><td><code>-perp-markets=</code> in the script</td><td><code>ANTUSDT-PERP</code></td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>mark_price_oracle.symbols</code></td><td><code>"ANTUSDT-PERP"</code></td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>mark_price_oracle.market_source_weights</code></td><td><code>ANTUSDT-PERP:</code> with <code>binance: 1</code></td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>engine.symbol_aliases_perp</code></td><td><code>ANTUSDT: "ANTUSDT-PERP"</code></td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>engine.binance_perp.markets</code></td><td><code>"ant/usdt"</code></td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>engine.binance_perp.orderbook.markets</code></td><td><code>"ant/usdt"</code></td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>engine.binance_perp.orderbook.volume_scaling.multipliers</code></td><td><code>ANTUSDT-PERP: "0.0015"</code> (optional, see below)</td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>mark_oracle.binance.symbols</code></td><td><code>"ANTUSDT-PERP"</code></td></tr><tr><td><code>quote/quote.yaml</code></td><td><code>mark_oracle.symbol_mappings.binance</code></td><td><code>"ANTUSDT-PERP": "ant/usdt"</code></td></tr><tr><td><code>ledger/ledger.yaml</code></td><td><code>markets</code> and <code>a_book_perp_markets</code></td><td><code>ANTUSDT-PERP</code> in both lists. Not in <code>perp_markets</code>.</td></tr><tr><td><code>perp_trigger/perp_trigger.yaml</code></td><td><code>perp_markets</code></td><td><code>"ANTUSDT-PERP"</code></td></tr><tr><td><code>trading_api/trading_api.yaml</code></td><td><code>enabled_futures_markets</code></td><td><code>"ANTUSDT-PERP"</code></td></tr></tbody></table></div><div class="main"><p>All of the above follow what the existing A-Book markets (for example <code>ARBUSDT-PERP</code>) have on the <code>aws</code> branch today. <strong>Do not add</strong> OKX or Bybit entries and do not add a <code>mark_oracle.okx</code> or <code>bybit</code> mapping: those collectors are disabled in prod, and A-Book prices come from Binance only.</p></div><div class="margin"><div class="mn warn"><b class="lb">Easy to miss</b><p><code>perp_trigger.yaml</code> is not in the older runbook. perp_trigger subscribes to each market's order-update and trade topics once, at start (<code>perp_trigger/service.go</code>), so without this entry trigger orders (stop and take-profit) for ANT would not complete on cancel.</p></div></div><div class="main"><h2 id="config-2">Displayed volume multiplier (optional)</h2><p>The mirrored 24 h volume is scaled so that the displayed number is between 0.5 M and 5 M USDT, as for the other A-Book markets. ANT trades about 3.22 B USDT in 24 hours, so a multiplier of <code>0.0015</code> shows about 4.8 M. Existing precedents: GOOGL 0.005 (about 4.2 M), XAU 0.002 (about 4.7 M). The key is cosmetic and harmless if unused. The final number is a product decision.</p></div><div class="margin"></div><div class="main"><h2 id="config-3">Quote capacity</h2><p>Each new mirrored market adds a REST depth bootstrap, a diff stream, a local book, klines, trades and ticker. Quote shares one Binance REST budget (<code>rest_weight_per_minute: 600</code>). One more market is small, but watch quote CPU and the <code>SAFE_MODE</code> state during the first hour after the restart, because a throttled quote drops mark samples for every market.</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="deploy"><div class="chap-h"><div class="eyebrow">Order matters</div><h1><span class="no">05</span>Deploy and verify</h1><p class="lede">The market stays FROZEN for the whole chapter. Orders create events, and events published before a consumer exists are lost for good.</p></div><div class="sec"><div class="main"><h2 id="deploy-1">Order of steps</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>#</th><th>Step</th><th>Why this order</th><th>Basis</th></tr></thead><tbody><tr><td>1</td><td>Merge the config PR. Run the Kafka topic provisioning Job and wait until it succeeds.</td><td>Topics must exist before quote starts the mirror and before trading-api subscribes. Publishing to a missing topic stalls the shared producer and freezes marks for every market.</td><td>Incident 2026-10-08</td></tr><tr><td>2</td><td>Deploy quote and ledger with the new config. <strong>Restart quote</strong> and <strong>restart ledger</strong>.</td><td>Quote creates mirror workers at start only. Ledger builds its external kline and ticker consumers at start.</td><td>Incidents 2026-11-10 and 2026-10-27</td></tr><tr><td>3</td><td>Create the market through the Admin API (03-2) and write the risk tiers (03-3).</td><td>Services learn the market from the sync event. FROZEN keeps it closed.</td><td>Runbook rev 2</td></tr><tr><td>4</td><td><strong>Restart perp_trigger.</strong> <strong>Rolling-restart PM Perp</strong>, one node at a time, and let each rejoin. <strong>Restart trading-api.</strong></td><td>Per-market Kafka subscriptions are built once from the market list at process start. A process that started before the market exists never subscribes.</td><td>perp_trigger: code. PM Perp, trading-api: incident 2026-10-27</td></tr><tr><td>5</td><td>Verify consumers: consumer groups have active members, <code>GET /orderbook?symbol=ANTUSDT-PERP</code> returns data through the edge, and logs for trading-api and PM Perp appear in Loki.</td><td>Catches the exact gap behind both 2026-10-27 incidents.</td><td>Runbook rev 2</td></tr><tr><td>6</td><td>Wait for warm-up: depth snapshot and diff stream, external klines and ticker, fresh Binance mark and funding, connector heartbeat.</td><td>Do not open on a cold cache.</td><td>Runbook</td></tr><tr><td>7</td><td>Run the FROZEN acceptance (next section).</td><td>Everything is checked while no user can trade.</td><td>Runbook</td></tr></tbody></table></div><div class="main"></div><div class="margin"><div class="mn warn"><b class="lb">Restart list</b><p>quote · ledger · perp_trigger · trading-api · PM Perp (rolling). This is the full list. A restart that is skipped shows up later as an empty order book or lost trigger orders, not as an error.</p></div></div><div class="main"><h2 id="deploy-2">FROZEN acceptance</h2><ul class="check"><li>The A-Book status shows A_BOOK, ACTIVE, FROZEN and <code>route_version = 1</code>.</li><li>The market row equals the release-day snapshot, field by field.</li><li>The risk tiers read back through <code>ListPerpsMarketRiskTiers</code> match the generated rows.</li><li>Order book mirror: about 50 levels per side and a spread of about one tick.</li><li>Mark, index and funding rate are non-zero and moving, and the mark source weight is Binance only.</li><li>Quote is not in SAFE_MODE. Klines and ticker are flowing. The 24 h volume shows the scaled value.</li><li>The MM connector is connected and heartbeating, the risk snapshot is fresh, and the House account exists.</li><li>Alerts are loaded and reach on-call.</li></ul></div><div class="margin"></div></div></section>
+<section class="chapter" id="open"><div class="chap-h"><div class="eyebrow">FROZEN to OPEN, then canary</div><h1><span class="no">06</span>Open the market</h1><p class="lede">Opening runs the readiness gate and closes the connector circuit. An HTTP 200 is not enough: the response body must have <code>code == 0</code>.</p></div><div class="sec"><div class="main"><h2 id="open-1">Open</h2><pre>GET  /perpetual/market/ANTUSDT-PERP/a-book/status      # read route_version
+
+POST /perpetual/market/ANTUSDT-PERP/a-book/state
+{
+  &quot;operation_id&quot;: &quot;&lt;new UUID&gt;&quot;,
+  &quot;state&quot;: &quot;OPEN&quot;,
+  &quot;reason&quot;: &quot;new A-Book market rollout ANTUSDT &lt;ticket&gt;&quot;,
+  &quot;expected_route_version&quot;: 1
+}</pre><p>If the connector snapshot is stale the gate refuses. Wait about a minute and retry. If a validation error mentions precision or a required field, fix the row, wait about 70 seconds for PM Perp to reload, and try again.</p></div><div class="margin"></div><div class="main"><h2 id="open-2">Canary</h2><ol class="seq"><li><b>Resting order.</b><span>A post-only limit order at a safe distance from the mid. Check it rests, then cancel it and check there is no residue.</span></li><li><b>Fill.</b><span>The A-Book MM is RFQ-style: only orders that cross immediately fill. Use a small MARKET order, then close the position.</span></li><li><b>Check.</b><span>Trade history, position and PnL are correct and the fee is 2 bps maker / 5 bps taker. The Binance hedge appears on the main account. No reconciliation diff.</span></li></ol></div><div class="margin"></div><div class="main"><p>Requests with invalid precision, below the minimum notional, above the maximum leverage or tier, or above <code>max_net_notional</code> must all be rejected.</p></div><div class="margin"></div><div class="main"><h2 id="open-3">Observe</h2><p>Watch the A-Book dashboards, reconciliation diffs and the alerts above before the next listing. For a new equity-style contract, ask the MM team how the hedge and the price behave outside US market hours. TODO: this was not checked here.</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="rollback"><div class="chap-h"><div class="eyebrow">Freeze first</div><h1><span class="no">07</span>Rollback</h1><p class="lede">On any failure, freeze, keep the evidence, and repair along the A-Book path. Rollback never changes execution ownership.</p></div><div class="sec"><div class="main"><h2 id="rollback-1">Steps</h2><ol class="seq"><li><b>FROZEN immediately.</b><span><code>POST /perpetual/market/ANTUSDT-PERP/a-book/state</code> with state FROZEN. Never book-switch to B-Book.</span></li><li><b>Keep evidence.</b><span>Operation id, route version, connector offsets, orders and fills, the Binance account snapshot, reconciliation diff, market data sequence and the alert timeline.</span></li><li><b>Handle exposure.</b><span>While any user, House or Binance position exists, stay FROZEN and repair through the A-Book cancel-all, reconcile and reconcile-order operations.</span></li><li><b>Orphaned margin locks.</b><span>Orders that locked margin but never produced an order row are reaped daily at 02:00 UTC. For an immediate release use <code>perpctl lock-reconciler</code> with <code>--dry-run</code> first.</span></li><li><b>Remove config only from zero.</b><span>Only with zero positions, orders, triggers, unsettled funding and Binance exposure may the market be disabled and removed from the subscriptions.</span></li></ol></div><div class="margin"></div><div class="main"><p>If Binance changes filters, funding or brackets during the rollout, freeze the market, take a new snapshot and open again only after the difference is reviewed.</p></div><div class="margin"></div></div></section>
+<section class="chapter" id="gaps"><div class="chap-h"><div class="eyebrow">Use this to review your own instruction</div><h1><span class="no">08</span>Gap checklist</h1><p class="lede">The items that were missed or caused incidents on earlier listings. Compare them with your draft one by one.</p></div><div class="sec"><div class="main"><h2 id="gaps-1">Does your instruction cover these?</h2></div><div class="margin"></div><div class="wide"><table class="t"><thead><tr><th>#</th><th>Item</th><th>Where</th></tr></thead><tbody><tr><td>1</td><td>Binance symbol is <code>ANTUSDT</code>, and the old <code>ANTHROPICUSDT</code> (SETTLING) appears nowhere.</td><td>01</td></tr><tr><td>2</td><td>The market is created FROZEN and opened only after acceptance. No book switch, no Finex shard.</td><td>01, 06</td></tr><tr><td>3</td><td>Parameters come from a release-day snapshot with raw files and hashes. Funding interval comes from <code>fundingInfo</code>.</td><td>02</td></tr><tr><td>4</td><td>Tiers come from the signed <code>leverageBracket</code> of the <strong>production</strong> account, with tier 2+ maintenance margin doubled.</td><td>02, 03</td></tr><tr><td>5</td><td><code>price_precision</code> equals the number of characters after the dot in <code>tick_size</code>. <code>amount_precision</code> equals those of <code>step_size</code> and <code>min_qty</code>.</td><td>03</td></tr><tr><td>6</td><td><code>mark_price_min_sources_normal = 1</code>, and the mark weight is Binance 1 only.</td><td>03, 04</td></tr><tr><td>7</td><td>Market is created through the Admin API, not SQL alone, and <code>added=1</code> is checked in the connector log.</td><td>03</td></tr><tr><td>8</td><td>All five files are in the config PR, including <code>perp_trigger.yaml</code> and both ledger lists.</td><td>04</td></tr><tr><td>9</td><td>Kafka topics exist before quote and trading-api start.</td><td>05</td></tr><tr><td>10</td><td>Restarts: quote, ledger, perp_trigger, trading-api, and PM Perp one node at a time.</td><td>05</td></tr><tr><td>11</td><td>Consumer readiness is verified before OPEN: order book through the edge, consumer group members, logs in Loki.</td><td>05</td></tr><tr><td>12</td><td>MM side is ready: hedge line, isolated margin, margin for <code>max_net_notional</code>, <code>mm_address</code>, symbol list.</td><td>02</td></tr><tr><td>13</td><td>House account exists in PM Perp and in Raft.</td><td>02</td></tr><tr><td>14</td><td>OPEN response is checked for <code>code == 0</code>, not just HTTP 200.</td><td>06</td></tr><tr><td>15</td><td>Canary uses a MARKET order that crosses, then closes the position.</td><td>06</td></tr><tr><td>16</td><td>Alerts reach on-call, and a rollback path (FROZEN, never B-Book) is written down.</td><td>02, 07</td></tr><tr><td>17</td><td>Frontend and product side (market list, icon) is confirmed. TODO: not covered by this document.</td><td>02</td></tr></tbody></table></div><div class="main"><h2 id="gaps-2">Open items for this listing</h2><ul class="pts"><li>Tier-1 maintenance margin rate and maximum leverage from the signed bracket.</li><li><code>mm_address</code> for production, from the MM team.</li><li><code>max_net_notional</code>, a risk decision.</li><li>Displayed-volume multiplier, a product decision.</li><li>Confirmation that the deployed images and the Binance execution account are ready.</li></ul></div><div class="margin"></div></div></section>
+<div class="foot">Binance values were read from the public fapi endpoints on 2026-11-20 01:51 UTC. Config key names were read from the <code>aws</code> branch of neodax-apps-value the same day. Restart reasons marked "incident" come from earlier runbooks and were not re-tested. The leverage bracket, <code>mm_address</code> and <code>max_net_notional</code> are intentionally not filled in.</div>
+</main>
+</div>
+<script>
+(function(){
+  var groups=[].slice.call(document.querySelectorAll('.toc .g'));
+  var map={};[].forEach.call(document.querySelectorAll('.toc a'),function(a){map[a.getAttribute('href').slice(1)]=a});
+  function setOn(id){
+    [].forEach.call(document.querySelectorAll('.toc a.on'),function(a){a.classList.remove('on')});
+    var a=map[id]; if(!a) return; a.classList.add('on');
+    var g=a.closest('.g'); groups.forEach(function(x){x.classList.toggle('open',x===g)});
+  }
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting) setOn(e.target.id||e.target.closest('.chapter').id); });
+  },{rootMargin:'-15% 0px -75% 0px'});
+  [].forEach.call(document.querySelectorAll('.chapter,.sec h2[id]'),function(s){io.observe(s)});
+})();
+</script>
+</body>
+</html>
