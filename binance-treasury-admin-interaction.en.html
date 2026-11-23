@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Binance treasury transfers: operator interaction</title>
+<style>
+/* spec — long-form design proposal. Three columns on wide screens:
+   sticky TOC | reading column | margin column. Wide tables break out of the text
+   column. Revisions are first-class: ins/del marks, per-section "Updated" pills,
+   margin change notes, a changelog banner and a "since you last read" memory. */
+:root{
+  --bg:#FBFAF7; --card:#fff; --ink:#16181D; --ink2:#4A4D55; --ink3:#8A8C92;
+  --hair:#E4E2DB; --hair2:#EFEDE7; --chip:#F0EEE8; --accent:#1F2A44;
+  --amber:#97690A; --amber-bg:#FBF1DC;
+  --ins:#E3F1E8; --ins-b:#2E7D4F; --del:#F8E3E0; --del-b:#C0392B;
+  --new:#EEE9FB; --new-b:#6A3FB5;
+  --serif:"Noto Serif SC","Songti SC","Source Han Serif SC",Georgia,serif;
+  --sans:Inter,"PingFang SC","Noto Sans SC","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 var(--sans)}
+code{font:.86em var(--mono);background:var(--chip);padding:1px 6px;border-radius:3px}
+a{color:var(--accent)}
+/* top bar + changelog banner */
+.bar{position:sticky;top:0;z-index:20;background:rgba(251,250,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar .in{max-width:1560px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:18px}
+.logo{font:600 22px var(--serif)}
+.crumb{padding-left:18px;border-left:1px solid var(--hair);color:var(--ink2);font-size:14px}
+.sp{flex:1}
+.pill{font:600 12px var(--sans);padding:2px 10px;border-radius:99px;background:var(--amber-bg);color:var(--amber);border:1px solid #EBD6A6}
+.lang{font-size:14px;color:var(--ink2);text-decoration:none;border:1px solid var(--hair);border-radius:4px;padding:3px 12px;background:var(--card)}
+.banner{background:var(--amber-bg);border-bottom:1px solid #EBD6A6}
+.banner .in{max-width:1560px;margin:0 auto;padding:12px 32px;display:flex;gap:22px;align-items:center;flex-wrap:wrap;font-size:14px}
+.banner b{font-weight:700}
+.tog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink2);user-select:none}
+.tog input{accent-color:var(--accent)}
+.btn{border:1px solid #D9C48F;background:#fff;border-radius:4px;padding:3px 12px;font:13px var(--sans);cursor:pointer;color:var(--ink)}
+.chg-list{display:none;max-width:1560px;margin:0 auto;padding:0 32px 14px}
+.chg-list.open{display:block}
+.chg-list table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #EBD6A6}
+.chg-list th,.chg-list td{padding:6px 12px;border-bottom:1px solid var(--hair2);text-align:left}
+.chg-list th{background:#FFF8E8;font-weight:600}
+/* shell */
+.shell{max-width:1560px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.toc{position:sticky;top:112px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding:28px 0}
+.toc .k{font-size:12px;letter-spacing:.08em;color:var(--ink3);margin-bottom:10px}
+.toc a{display:flex;justify-content:space-between;gap:8px;align-items:center;text-decoration:none;color:var(--ink2);font-size:14px;line-height:1.5;padding:6px 10px 6px 12px;border-left:2px solid var(--hair)}
+.toc a:hover{color:var(--ink);background:var(--hair2)}
+.toc a.on{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--card)}
+.toc a .no{font:12px var(--mono);color:var(--ink3);margin-right:8px}
+.toc .b{font:700 10px var(--sans);padding:1px 6px;border-radius:99px;background:var(--ins);color:var(--ins-b);flex-shrink:0}
+.toc .b.new{background:var(--new);color:var(--new-b)}
+body.only-changed .toc a:not([data-ch]){display:none}
+/* article */
+.hero{padding:44px 0 26px;border-bottom:2px solid var(--ink)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.14em;color:var(--amber)}
+.hero h1{margin:8px 0 8px;font:500 40px/1.25 var(--serif);letter-spacing:.3px}
+.hero p{margin:0;max-width:760px;color:var(--ink2);font-size:17px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.chip{background:var(--chip);border:1px solid var(--hair);border-radius:3px;padding:2px 11px;font:13px var(--mono);color:var(--ink2)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:36px;margin:28px 0 8px}
+.kpi{border-top:2px solid var(--ink);padding-top:12px}
+.kpi .k{font-size:13px;color:var(--ink2)} .kpi .v{font:500 34px/1.4 var(--serif)} .kpi .v small{font:14px var(--serif);color:var(--ink2);margin-left:4px}
+/* section = reading column + margin column; .wide spans both */
+.sec{display:grid;grid-template-columns:minmax(0,720px) minmax(240px,1fr);column-gap:48px;padding:40px 0 24px;border-bottom:1px solid var(--hair);position:relative}
+.sec>.main{grid-column:1}
+.sec>.margin{grid-column:2;padding-top:6px}
+.sec>.wide{grid-column:1/-1;margin:8px 0 8px;overflow-x:auto;background:var(--card);border:1px solid var(--hair);border-radius:6px}
+.sec h2{margin:0 0 10px;font:500 28px/1.35 var(--serif)}
+.sec h2 .no{font:15px var(--mono);color:var(--ink3);margin-right:12px}
+.sec h3{margin:26px 0 6px;font:600 16px var(--sans)}
+.sec p{margin:0 0 14px}
+.lede{font-size:17px;color:var(--ink2)}
+pre{background:#16181F;color:#E8E6DF;border-radius:6px;padding:14px 18px;overflow:auto;font:13px/1.8 var(--mono);margin:12px 0 16px}
+pre .c{color:#8A8C92}
+/* margin notes */
+.mn{font-size:13px;line-height:1.65;color:var(--ink2);border-left:2px solid var(--hair);padding:2px 0 2px 14px;margin:0 0 18px}
+.mn b.lb{display:block;font-size:11px;letter-spacing:.08em;color:var(--ink3);margin-bottom:2px}
+.mn.chg{border-left-color:var(--ins-b);background:linear-gradient(90deg,#F2F9F5,transparent)}
+.mn.chg b.lb{color:var(--ins-b)}
+.mn.todo{border-left-color:var(--amber)} .mn.todo b.lb{color:var(--amber)}
+/* revision markup */
+.pillrev{display:inline-block;vertical-align:middle;margin-left:12px;font:700 11px var(--sans);letter-spacing:.04em;padding:2px 9px;border-radius:99px;background:var(--ins);color:var(--ins-b)}
+.pillrev.new{background:var(--new);color:var(--new-b)}
+.sec.upd::before{content:"";position:absolute;left:-18px;top:44px;bottom:28px;width:3px;border-radius:3px;background:var(--ins-b);opacity:0}
+.sec.upd.fresh::before{opacity:1}
+.sec.upd.fresh.isnew::before{background:var(--new-b)}
+body:not(.show-changes) .pillrev,body:not(.show-changes) .sec.upd::before{display:none}
+ins{text-decoration:none;background:var(--ins);border-bottom:2px solid var(--ins-b);padding:0 2px}
+del{background:var(--del);color:var(--del-b);text-decoration:line-through;padding:0 2px}
+body:not(.show-changes) ins{background:none;border-bottom:0}
+body:not(.show-changes) del{display:none}
+body.hide-del del{display:none}
+body.only-changed .sec:not(.upd){display:none}
+/* tables */
+table.t{width:100%;border-collapse:collapse;font-size:14px;line-height:1.6}
+table.t th{position:sticky;top:0;background:#FAF9F5;text-align:left;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--ink);white-space:nowrap}
+table.t td{padding:10px 14px;border-bottom:1px solid var(--hair2);vertical-align:top;min-width:160px}
+table.t td:first-child,table.t th:first-child{position:sticky;left:0;background:#fff;font-weight:600;min-width:130px;border-right:1px solid var(--hair2);z-index:1}
+table.t tr:hover td{background:#FDFCF8} table.t tr:hover td:first-child{background:#FDFCF8}
+.tag{display:inline-block;font:500 .72em var(--mono);padding:1px .6em;border-radius:4px;vertical-align:1px;white-space:nowrap}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.note{border:1px solid var(--hair);background:var(--card);border-radius:6px;padding:12px 16px;margin:14px 0}
+.note h4{margin:0 0 4px;font-size:13px;color:var(--ink3);letter-spacing:.06em}
+.foot{padding:40px 0 80px;color:var(--ink3);font-size:13px}
+@media(max-width:1200px){.shell{grid-template-columns:1fr}.toc{display:none}.sec{grid-template-columns:minmax(0,1fr)}.sec>.margin{grid-column:1;order:3;padding-top:0}}
+@media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:30px}}
+@media print{.bar,.banner,.toc{display:none}.shell{display:block}ins,del{print-color-adjust:exact}}
+ul.pts{list-style:none;margin:10px 0 14px;padding:0}
+ul.pts li{position:relative;padding:5px 0 5px 22px;color:var(--ink2)}
+ul.pts li::before{content:"";position:absolute;left:6px;top:15px;width:5px;height:5px;border-radius:50%;background:var(--amber)}
+td.mono{font:12.5px/22.4px var(--mono)}
+.tag.a{background:var(--amber-bg);color:var(--amber)}
+ul.gate,ul.check,ol.seq{list-style:none;margin:16px 0;padding:0}
+ul.gate li,ul.check li,ol.seq li{position:relative;border-top:1px solid var(--hair);font-size:14.5px;color:var(--ink2);line-height:1.7}
+ul.gate li:last-child,ul.check li:last-child,ol.seq li:last-child{border-bottom:1px solid var(--hair)}
+ul.gate li{padding:10px 0 10px 84px}ul.gate li .tag{position:absolute;left:0;top:13px}
+ul.check li{padding:10px 0 10px 30px}
+ul.check li::before{content:"";position:absolute;left:2px;top:16px;width:12px;height:12px;border:1.5px solid #CFCCC2;border-radius:3px;background:var(--card)}
+ol.seq{counter-reset:step}
+ol.seq li{counter-increment:step;padding:14px 0 12px 44px}
+ol.seq li::before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:16px;font:12px var(--mono);color:var(--amber)}
+ol.seq b{display:block;font-weight:600;color:var(--ink);margin-bottom:2px}
+ol.seq span{display:block;font-size:14px}
+.tag.n{background:var(--chip);color:var(--ink2)}
+.wf{border:1px solid var(--hair);border-radius:6px;background:var(--card);padding:14px 18px;margin:14px 0 18px;font-size:13.5px;color:var(--ink2)}
+.wf .ttl{font:600 11px var(--sans);letter-spacing:.08em;color:var(--ink3);margin-bottom:6px}
+.wf .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:7px 0;border-top:1px dashed var(--hair)}
+.wf .row:first-of-type{border-top:0}
+.wf .bx{border:1px solid var(--hair);border-radius:4px;padding:1px 10px;background:var(--bg);font:12px/1.9 var(--mono);color:var(--ink)}
+.wf .bt{border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 12px;font:600 12px/1.9 var(--sans);background:#fff}
+.wf .bt.d{border-color:var(--del-b);color:var(--del-b)}
+.wf .lb2{min-width:128px;color:var(--ink3);font-size:12.5px}
+</style>
+</head>
+<body class="show-changes">
+
+<div class="bar"><div class="in">
+  <div class="logo">Yellow<i style="font-style:normal">.</i></div>
+  <div class="crumb">Admin console · Binance treasury transfers</div>
+  <div class="sp"></div>
+  <span class="pill">v1 · for confirmation</span>
+  <a class="lang" href="binance-treasury-admin-interaction.html">中文</a>
+</div></div>
+
+<div class="banner"><div class="in">
+  <span><b>v1 · 2026-11-23</b>　first draft, <span id="nchg"></span> changed sections</span>
+  <label class="tog"><input type="checkbox" id="t-show" checked> Show changes</label>
+  <label class="tog"><input type="checkbox" id="t-del"> Hide deleted text</label>
+  <label class="tog"><input type="checkbox" id="t-only"> Only changed sections</label>
+  <button class="btn" id="b-log">Change log ⌄</button>
+  <button class="btn" id="b-read">Mark all as read</button>
+  <span style="color:var(--ink3)">Keys　n next　p previous</span>
+</div>
+<div class="chg-list" id="log"><table>
+<tr><th>#</th><th>Section</th><th>Change</th><th>Reason</th><th>Source</th></tr>
+<tr><td>—</td><td>All</td><td>First draft</td><td>Interaction details need confirmation before the pages are built</td><td>Code read of neodax PR #1868</td></tr>
+</table></div></div>
+
+<div class="shell">
+<nav class="toc" id="toc">
+  <div class="k">CONTENTS</div>
+  <a href="#summary"><span><span class="no">01</span>Summary</span></a>
+  <a href="#scope"><span><span class="no">02</span>What an operator can do</span></a>
+  <a href="#page"><span><span class="no">03</span>Page layout</span></a>
+  <a href="#states"><span><span class="no">04</span>States and actions</span></a>
+  <a href="#propose"><span><span class="no">05</span>Propose</span></a>
+  <a href="#decide"><span><span class="no">06</span>Approve, reject, cancel</span></a>
+  <a href="#track"><span><span class="no">07</span>Track execution</span></a>
+  <a href="#stalled"><span><span class="no">08</span>Manual review</span></a>
+  <a href="#health"><span><span class="no">09</span>Profile and health</span></a>
+  <a href="#api"><span><span class="no">10</span>API reference</span></a>
+  <a href="#errors"><span><span class="no">11</span>Error messages</span></a>
+  <a href="#questions"><span><span class="no">12</span>Questions to confirm</span></a>
+  <a href="#prereq"><span><span class="no">13</span>Before it can be used</span></a>
+</nav>
+
+<main>
+  <header class="hero" id="summary">
+    <div class="eyebrow">NEODAX · ADMIN CONSOLE · PLATFORM FINANCE</div>
+    <h1>Binance treasury transfers: operator interaction</h1>
+    <p>How an operator funds the Binance account from custody, and sweeps funds from the transit address back to custody, in the admin console. The backend in neodax PR #1868 supports the whole flow; the console pages do not exist yet. This document describes the proposed pages against the real API so the interaction can be confirmed before they are built. Section 12 lists the 15 points that need an answer.</p>
+    <div class="chips"><span class="chip">draft v1</span><span class="chip">2026-11-23</span><span class="chip">backend: PR #1868 at 914bb438, not merged</span><span class="chip">frontend: not started</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Admin endpoints</div><div class="v">11</div></div>
+      <div class="kpi"><div class="k">Operation states</div><div class="v">10</div></div>
+      <div class="kpi"><div class="k">Operator actions</div><div class="v">6</div></div>
+      <div class="kpi"><div class="k">Questions to confirm</div><div class="v">15</div></div>
+    </div>
+  </header>
+
+  <section class="sec" id="scope">
+    <div class="main">
+      <h2><span class="no">02</span>What an operator can do</h2>
+      <p class="lede">Two kinds of transfer, each proposed by one person and approved by another. The operator chooses the asset, the amount and a reason. Everything else is fixed.</p>
+      <ul class="pts">
+        <li><strong>Funding</strong>: custody contract, then the transit address, then the Binance deposit address. Two on-chain legs.</li>
+        <li><strong>Sweep</strong>: transit address back to the custody contract. One on-chain leg.</li>
+      </ul>
+      <h3>What the operator cannot set</h3>
+      <p>The request carries no address, network or key. The destination address, the chain, the per-transfer minimum and maximum and the daily limits all come from a fixed profile held by Cage. The console only displays them.</p>
+      <h3>The six actions</h3>
+      <ul class="pts">
+        <li>Propose a funding</li>
+        <li>Propose a sweep</li>
+        <li>Approve a proposal made by someone else</li>
+        <li>Reject a proposal made by someone else</li>
+        <li>Cancel your own proposal</li>
+        <li>Abandon a stalled operation whose current leg was never sent</li>
+      </ul>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">CODE</b>Routes: <code>admin/router/platform_finance.go</code>. Handlers: <code>admin/api/platform_finance/binance_treasury.go</code>. The comment on the API type states that requests never carry addresses, networks or keys.</div>
+      <div class="mn"><b class="lb">NOT THIS FLOW</b>neodax PR #1775 is about risk review of user withdrawals. It is unrelated to treasury transfers.</div>
+      <div class="mn todo"><b class="lb">TO CONFIRM · Q1</b>Proposer and approver are told apart by user, not by role. See section 12.</div>
+    </div>
+  </section>
+
+  <section class="sec" id="page">
+    <div class="main">
+      <h2><span class="no">03</span>Page layout</h2>
+      <p class="lede">Proposal: a new "Binance Treasury" tab on the existing Platform Finance page, next to Spot Credit. No new menu row is needed.</p>
+      <p>The page has four blocks, top to bottom. Each block maps to one read endpoint.</p>
+      <div class="wf">
+        <div class="ttl">PLATFORM FINANCE · BINANCE TREASURY</div>
+        <div class="row"><span class="lb2">A. Health strip</span><span class="bx">Execution: ON</span><span class="bx">Gas: OK</span><span class="bx">Balances: fresh</span><span class="bx">Evidence lag: 0</span></div>
+        <div class="row"><span class="lb2">B. Profile</span><span class="bx">binance-main</span><span class="bx">network</span><span class="bx">transit address</span><span class="bx">custody address</span></div>
+        <div class="row"><span class="lb2">C. Assets</span><span class="bx">USDT</span><span class="bx">min / max</span><span class="bx">used today / daily limit</span><span class="bx">at transit</span><span class="bx">sweepable</span><span class="bx">net to Binance</span></div>
+        <div class="row"><span class="lb2">D. Operations</span><span class="bx">type ▾</span><span class="bx">state ▾</span><span class="bx">asset ▾</span><span class="sp"></span><span class="bt">Propose funding</span><span class="bt">Propose sweep</span></div>
+        <div class="row"><span class="lb2"></span><span class="bx">created</span><span class="bx">type</span><span class="bx">asset</span><span class="bx">amount</span><span class="bx">state</span><span class="bx">proposer</span><span class="bx">approver</span><span class="bx">Cage state</span><span class="bx">last error</span></div>
+      </div>
+      <p>Clicking a row opens the operation detail (section 07). The two Propose buttons are disabled, with the reason shown, when the matching feature flag is off or when Cage reports that execution is disabled.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">EXISTING PAGE</b>The dashboard already has <code>pages/platformFinance/SpotCreditPage.tsx</code> with tabs and an operation detail dialog that has Approve and Reject. The new tab can follow the same pattern.</div>
+      <div class="mn"><b class="lb">DATA SOURCE</b>A and B and the limits in C: <code>GET /profile</code>. Evidence lag in A: <code>GET /ingestion</code>. Net to Binance in C: <code>GET /flows</code>. D: <code>GET /operations</code>.</div>
+      <div class="mn todo"><b class="lb">TO CONFIRM · Q2, Q7</b>Tab or separate menu. The list returns at most the newest 500 operations and has no paging.</div>
+    </div>
+  </section>
+
+  <section class="sec" id="states">
+    <div class="main">
+      <h2><span class="no">04</span>States and actions</h2>
+      <p class="lede">An operation has ten possible states in Admin. Only the first one accepts an operator decision. After approval everything is automatic until the operation completes, fails or stalls.</p>
+<pre>approval_pending ─ approve ─▶ approved ─ dispatch ─▶ executing ─▶ completed
+  ├─ reject ─▶ rejected
+  ├─ cancel ─▶ cancelled
+  └─ 24 h   ─▶ expired
+
+approved      ─▶ failed_retryable ─ auto retry ─▶ executing
+approved      ─▶ failed_terminal   <span class="c"># Cage refused it</span>
+executing     ─▶ manual_review     <span class="c"># Cage reports a stall</span>
+manual_review ─ abandon ─▶ failed_terminal
+manual_review ─ leg makes progress ─▶ executing
+executing     ─▶ failed_terminal   <span class="c"># a leg failed for good</span></pre>
+      <p>State values are lowercase strings in the API, for example <code>approval_pending</code>.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">CODE</b>State constants: <code>admin/model/platform_finance.go:10-19</code>. Transitions from Cage evidence: <code>applyEvidenceTransition</code> in <code>admin/service/platform_finance/binance_treasury.go</code>.</div>
+      <div class="mn"><b class="lb">TWO STATE FIELDS</b>The Admin state above is what decides which buttons show. Cage has its own finer state (<code>LEG1_IN_PROGRESS</code> and so on), shown as extra information.</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>Admin state</th><th>Meaning</th><th>How it is entered</th><th>Operator actions</th><th>What the page shows</th></tr></thead>
+      <tbody>
+      <tr><td>approval_pending</td><td>Waiting for a second person</td><td>Proposal created</td><td>Others: Approve, Reject. Proposer: Cancel</td><td>Time left until the 24-hour expiry</td></tr>
+      <tr><td>approved</td><td>Approved, waiting to be sent to Cage</td><td>Approval</td><td>None</td><td>Normally lasts about 2 seconds</td></tr>
+      <tr><td>executing</td><td>Cage accepted it and is moving funds</td><td>Cage accepts, or a leg is sent or confirmed</td><td>None</td><td>Legs with transaction hash and confirmations</td></tr>
+      <tr><td>failed_retryable</td><td>Sending to Cage failed in a way that may succeed later</td><td>Timeout or transport error on dispatch</td><td>None</td><td>Attempt count, last error, next retry time</td></tr>
+      <tr><td>manual_review</td><td>Cage reports the operation is stalled</td><td><code>OPERATION_STALLED</code> evidence</td><td>Abandon, only if the current leg was never sent</td><td>Stall reason, whether funds are at the transit address</td></tr>
+      <tr><td>completed</td><td>All legs final on chain</td><td><code>OPERATION_COMPLETED</code> evidence</td><td>None</td><td>Final transaction, amount added to net flow</td></tr>
+      <tr><td>failed_terminal</td><td>Will not proceed</td><td>Cage refused it, a leg failed for good, or it was abandoned</td><td>None. Propose again if still needed</td><td>Error code and message</td></tr>
+      <tr><td>rejected</td><td>Refused by a second person</td><td>Reject</td><td>None</td><td>Who rejected and why</td></tr>
+      <tr><td>cancelled</td><td>Withdrawn by the proposer</td><td>Cancel</td><td>None</td><td>—</td></tr>
+      <tr><td>expired</td><td>Nobody decided within 24 hours</td><td>Background worker</td><td>None</td><td>—</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="propose">
+    <div class="main">
+      <h2><span class="no">05</span>Propose</h2>
+      <p class="lede">One dialog for both kinds. The kind is fixed by the button that opened it.</p>
+      <div class="wf">
+        <div class="ttl">PROPOSE FUNDING (CUSTODY → BINANCE) · EXAMPLE VALUES</div>
+        <div class="row"><span class="lb2">Asset</span><span class="bx">USDT ▾</span><span>only assets in the profile</span></div>
+        <div class="row"><span class="lb2">Amount</span><span class="bx">250000</span><span>min 1,000 · max 500,000 · left today 750,000</span></div>
+        <div class="row"><span class="lb2">Reason (required)</span><span class="bx">Top up hedge margin for ANTUSDT</span></div>
+        <div class="row"><span class="lb2">Risk context (optional)</span><span class="bx">free text, shown to the approver</span></div>
+        <div class="row"><span class="lb2">Read-only</span><span class="bx">to: Binance deposit 0x…</span><span class="bx">network</span><span class="bx">profile binance-main</span></div>
+        <div class="row"><span class="sp"></span><span class="bt">Cancel</span><span class="bt">Submit proposal</span></div>
+      </div>
+      <h3>What the backend checks on submit</h3>
+      <ol class="seq">
+        <li><b>Feature flag</b><span>Funding and sweep have separate flags. If the flag is off the request fails.</span></li>
+        <li><b>Required fields</b><span>Asset and reason must not be empty. Amount must be positive.</span></li>
+        <li><b>Cage profile</b><span>The profile must be configured and execution enabled. The asset must be in the profile.</span></li>
+        <li><b>Amount bounds</b><span>Between the asset's minimum and maximum.</span></li>
+        <li><b>Sweep only: sweepable balance</b><span>Not more than the sweepable balance of the transit address, when Cage knows that balance.</span></li>
+        <li><b>Idempotency key</b><span>Required. The same key with the same content returns the existing proposal. The same key with different content is a conflict.</span></li>
+      </ol>
+      <p>The daily limit is <strong>not</strong> checked when proposing. It is checked at approval and enforced by Cage.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">REQUEST</b><code>POST /fundings</code> or <code>POST /sweeps</code> with <code>asset</code>, <code>amount</code> (decimal string), <code>reason</code>, optional <code>risk_context</code>, and the key in the <code>Idempotency-Key</code> header or <code>idempotency_key</code> field.</div>
+      <div class="mn"><b class="lb">FROZEN AT PROPOSAL</b>The profile id, its fingerprint, chain id and network are stored with the proposal. If the profile changes later, approval is refused.</div>
+      <div class="mn todo"><b class="lb">TO CONFIRM · Q3, Q14</b>The console generates the idempotency key. Amount precision is not checked here (backend gap).</div>
+    </div>
+  </section>
+
+  <section class="sec" id="decide">
+    <div class="main">
+      <h2><span class="no">06</span>Approve, reject, cancel</h2>
+      <p class="lede">All three act only on an operation in <code>approval_pending</code>. They are buttons in the operation detail.</p>
+      <h3>Approve</h3>
+      <ul class="check">
+        <li>The approver is not the proposer.</li>
+        <li>The feature flag for this kind is still on.</li>
+        <li>The Cage profile is still configured and enabled, and its id and fingerprint match the ones stored with the proposal.</li>
+        <li>Amount approved today for this kind and asset, plus this amount, does not exceed the daily limit.</li>
+      </ul>
+      <p>The approval record, the state change and the message that sends it to Cage are written in one database transaction. The reason is optional for approve.</p>
+      <h3>Reject</h3>
+      <p>Needs a reason. The proposer cannot reject their own proposal; they cancel it instead.</p>
+      <h3>Cancel</h3>
+      <p>Only the proposer. No reason field in the API.</p>
+      <h3>Expiry</h3>
+      <p>A proposal nobody decided on moves to <code>expired</code> 24 hours after it was created. The background worker does this, so the change appears within a few seconds of the deadline.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">DAILY LIMIT IS ADVISORY HERE</b>Two approvers acting at the same moment can both pass this check. Cage enforces the real limit under a lock. The approval that loses is refused by Cage and ends as <code>failed_terminal</code> with <code>DAILY_LIMIT_EXCEEDED</code>. No extra funds move.</div>
+      <div class="mn"><b class="lb">CODE</b><code>ApproveBinanceTreasury</code>, then <code>approveOperation</code> (<code>service.go:87-130</code>, outbox row at line 124).</div>
+      <div class="mn todo"><b class="lb">TO CONFIRM · Q4, Q5, Q6</b>Whether approve should require a reason in the UI, whether cancel needs one, and whether anyone is notified.</div>
+    </div>
+  </section>
+
+  <section class="sec" id="track">
+    <div class="main">
+      <h2><span class="no">07</span>Track execution</h2>
+      <p class="lede">After approval nobody clicks anything. The detail view is where an operator watches progress.</p>
+      <ol class="seq">
+        <li><b>Dispatch, within about 2 seconds</b><span>An Admin background worker sends the approved operation to Cage, signed with a shared key. Only one Admin replica does this at a time.</span></li>
+        <li><b>Cage accepts or refuses</b><span>Cage checks the signature, then the profile, amount bounds, daily limit and, for a sweep, the sweepable balance. For a funding it also checks that the custody withdrawal breaker is closed. A refusal ends the operation as <code>failed_terminal</code>.</span></li>
+        <li><b>Funding leg 1: custody to transit address</b><span>Cage starts a custody withdrawal to the transit address and waits for it to be final.</span></li>
+        <li><b>Funding leg 2: transit address to Binance</b><span>The transit address sends the tokens to the Binance deposit address. If the transaction stays unmined, Cage raises the fee, up to a configured cap.</span></li>
+        <li><b>Sweep: one leg</b><span>The transit address sends the tokens back to custody.</span></li>
+        <li><b>Completed</b><span>When the last leg is final, the amount is added to the net-flow totals exactly once.</span></li>
+      </ol>
+      <h3>Operation detail</h3>
+      <div class="wf">
+        <div class="ttl">OPERATION 7f3a… · FUNDING · USDT 250,000 · EXAMPLE VALUES</div>
+        <div class="row"><span class="lb2">State</span><span class="bx">executing</span><span class="bx">Cage: LEG2_IN_PROGRESS</span><span class="bx">funds at transit: yes</span></div>
+        <div class="row"><span class="lb2">People</span><span class="bx">proposer alice</span><span class="bx">approver bob</span><span class="bx">approved 10:02:11 UTC</span></div>
+        <div class="row"><span class="lb2">Leg 1</span><span class="bx">CUSTODY_TO_EOA</span><span class="bx">FINAL</span><span class="bx">tx 0x…</span><span class="bx">12 confirmations</span></div>
+        <div class="row"><span class="lb2">Leg 2</span><span class="bx">EOA_TO_BINANCE</span><span class="bx">SUBMITTED</span><span class="bx">tx 0x…</span><span class="bx">attempts 1</span><span class="bx">reverts 0 / 2</span></div>
+        <div class="row"><span class="lb2">Timeline</span><span class="bx">accepted</span><span class="bx">leg 1 submitted</span><span class="bx">leg 1 final</span><span class="bx">leg 2 submitted</span></div>
+        <div class="row"><span class="lb2">Reason</span><span>Top up hedge margin for ANTUSDT</span></div>
+      </div>
+      <p>The view refreshes on a timer while the state is <code>approved</code>, <code>executing</code>, <code>failed_retryable</code> or <code>manual_review</code>, and stops on a final state.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">WHERE THE DATA COMES FROM</b><code>GET /operations/:id</code> returns the operation, its decoded details, the execution row, the approvals, the evidence timeline stored in Admin, and a live read of the operation and its legs from Cage. If the live read fails, the response still comes back with <code>cage_error</code> filled in.</div>
+      <div class="mn"><b class="lb">CAGE STATES</b><code>ACCEPTED</code>, <code>LEG1_IN_PROGRESS</code>, <code>LEG2_IN_PROGRESS</code>, <code>SWEEP_IN_PROGRESS</code>, <code>STALLED</code>, <code>COMPLETED</code>, <code>FAILED_TERMINAL</code>, <code>ABANDONED</code>. Leg states: <code>PENDING</code>, <code>SUBMITTED</code>, <code>INCLUDED</code>, <code>FINAL</code>, <code>FAILED</code>, <code>ABANDONED</code>.</div>
+      <div class="mn"><b class="lb">RETRY ON DISPATCH</b>Automatic, with a wait that doubles from 1 second up to 5 minutes. Sending the same operation again never creates a second transfer: Cage recognises the operation id.</div>
+      <div class="mn todo"><b class="lb">TO CONFIRM · Q8, Q11, Q13</b>Refresh interval, whether a manual "retry now" is wanted, and block explorer links.</div>
+    </div>
+  </section>
+
+  <section class="sec" id="stalled">
+    <div class="main">
+      <h2><span class="no">08</span>Manual review</h2>
+      <p class="lede">An operation enters <code>manual_review</code> when Cage reports it stalled. This is the only state after approval where an operator may act.</p>
+      <h3>Why an operation stalls</h3>
+      <ul class="pts">
+        <li>A leg kept failing with the same kind of error for longer than the configured stall time (30 minutes in the sample config).</li>
+        <li>A transit-address transaction was mined but reverted more times than allowed (2 in the sample config).</li>
+      </ul>
+      <p>Cage keeps working a stalled operation. If the leg then makes progress, the operation returns to <code>executing</code> on its own.</p>
+      <h3>Abandon</h3>
+      <div class="wf">
+        <div class="ttl">ABANDON STALLED OPERATION · EXAMPLE VALUES</div>
+        <div class="row"><span class="lb2">Stall reason</span><span class="bx">WITHDRAWAL_BREAKER_OPEN</span><span>the custody withdrawal breaker is open</span></div>
+        <div class="row"><span class="lb2">Current leg</span><span class="bx">CUSTODY_TO_EOA</span><span class="bx">PENDING</span><span class="bx">never sent</span></div>
+        <div class="row"><span class="lb2">Reason (required)</span><span class="bx">Breaker will stay open today, re-propose tomorrow</span></div>
+        <div class="row"><span class="sp"></span><span class="bt">Close</span><span class="bt d">Abandon</span></div>
+      </div>
+      <ul class="check">
+        <li>The Admin state is <code>manual_review</code> and the Cage state is <code>STALLED</code>.</li>
+        <li>The current leg was never signed or sent. If it was, Cage refuses with <code>LEG_BROADCAST</code>: the transaction must reach finality and cannot be abandoned.</li>
+        <li>A reason is given.</li>
+      </ul>
+      <p>After an abandon the operation ends as <code>failed_terminal</code>. If no leg was final, the amount is released from the daily usage.</p>
+      <h3>Funds left at the transit address</h3>
+      <p>If a funding is abandoned or fails after leg 1 was final, the money is at the transit address. It stays there. Getting it back is a normal sweep: proposed by one person and approved by another.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">CODE</b>Admin: <code>AbandonBinanceTreasuryLeg</code>. Cage: <code>Service.Abandon</code> in <code>cage/binancetreasury/service.go</code>. The abandon request is signed the same way as a submission.</div>
+      <div class="mn"><b class="lb">RETRYABLE LEG ERRORS</b><code>WITHDRAWAL_BREAKER_OPEN</code>, <code>CUSTODY_SUBMISSION_PAUSED</code>, <code>FEE_CAP_REACHED</code>, <code>STUCK_MAX_FEE_BUMPS</code>, <code>INCLUDED_TX_REVERTED</code>, <code>REORGED</code>, <code>REORG_SUSPECTED</code>, <code>PROFILE_CHANGED</code>, <code>ASSET_NOT_IN_PROFILE</code>.</div>
+      <div class="mn todo"><b class="lb">TO CONFIRM · Q9, Q10</b>Abandon is a single-person action. Whether the page should offer a pre-filled sweep when funds are left at the transit address.</div>
+    </div>
+  </section>
+
+  <section class="sec" id="health">
+    <div class="main">
+      <h2><span class="no">09</span>Profile and health</h2>
+      <p class="lede">The top of the page tells an operator whether a transfer can work right now, before they propose one.</p>
+      <h3>Per asset</h3>
+      <ul class="pts">
+        <li>Minimum and maximum per transfer.</li>
+        <li>Daily limit and amount used today, separately for funding and sweep.</li>
+        <li>Balance at the transit address, and how much of it can be swept.</li>
+        <li>Amount in transit: fundings whose first leg is final and whose second is not.</li>
+        <li>Net transferred to Binance: confirmed outbound minus confirmed returned. This is a record of what moved through this workflow. It is not the Binance account balance and it can be negative.</li>
+      </ul>
+      <h3>Warnings the page must show</h3>
+      <ul class="gate">
+        <li><span class="tag stop">BLOCK</span>Execution is disabled in Cage, or the profile is not configured. Proposing is refused.</li>
+        <li><span class="tag stop">BLOCK</span>Evidence ingestion is halted. States on this page may be out of date until an engineer resolves it. Show the halt reason and the blocking event.</li>
+        <li><span class="tag a">WARN</span>Gas status of the transit address is <code>LOW</code> or <code>BELOW_RESERVE</code>. Transfers from it may not go out.</li>
+        <li><span class="tag a">WARN</span>Balances are stale or unknown. The sweepable amount shown may be wrong.</li>
+        <li><span class="tag a">WARN</span>Evidence lag is above zero for more than a short time.</li>
+      </ul>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">GAS STATUS</b>One of <code>OK</code>, <code>LOW</code>, <code>BELOW_RESERVE</code>, <code>UNKNOWN</code>. Topping up gas on the transit address is outside this workflow.</div>
+      <div class="mn"><b class="lb">INGESTION HALT</b>Admin stops reading Cage evidence when a row refers to an operation Admin never sent, or does not match what was approved. It never skips the row on its own. <code>GET /ingestion</code> returns <code>halted</code>, <code>halt_reason</code> (<code>unknown_operation</code>, <code>evidence_drift</code>, <code>apply_error</code>), <code>halted_event_id</code> and <code>lag</code>.</div>
+      <div class="mn todo"><b class="lb">TO CONFIRM · Q12, Q15</b>Which "used today" number to show, and who is told when ingestion halts.</div>
+    </div>
+  </section>
+
+  <section class="sec" id="api">
+    <div class="main">
+      <h2><span class="no">10</span>API reference</h2>
+      <p class="lede">All paths are under <code>/platform-finance/binance-treasury</code> in admin-service. They need a logged-in admin and a Casbin rule. The migration in PR #1868 grants all eleven to role 1.</p>
+      <p>Responses use the usual envelope: <code>code</code> is 0 on success, and on failure <code>message</code> carries the text shown in section 11.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">FIELD NAME CASING</b>The operation's own fields come back in Pascal case (<code>ID</code>, <code>State</code>, <code>OperationType</code>, <code>ProposerUsername</code>, <code>CreatedAt</code>) because the Go struct has no JSON tags. The nested <code>details</code>, <code>execution</code>, <code>approvals</code>, <code>evidence</code> and <code>cage</code> use snake case. The existing dashboard type <code>PlatformFinanceOperation</code> already follows this.</div>
+      <div class="mn"><b class="lb">NOT PUBLIC</b>admin-service is reachable only inside the private network. None of these endpoints is exposed to the internet.</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>Method and path</th><th>Purpose</th><th>Input</th><th>Returns</th></tr></thead>
+      <tbody>
+      <tr><td class="mono">GET /profile</td><td>Profile, transit address balances, gas status, per-asset limits and usage</td><td>—</td><td><code>configured</code>, <code>execution_enabled</code>, <code>profile_id</code>, <code>fingerprint</code>, <code>network</code>, <code>transit_eoa_address</code>, <code>custody_address</code>, <code>gas_status</code>, <code>balances_stale</code>, <code>assets[]</code></td></tr>
+      <tr><td class="mono">GET /flows</td><td>Net-flow totals per asset</td><td>—</td><td><code>confirmed_outbound</code>, <code>confirmed_returned</code>, <code>net_transferred_to_binance</code>, <code>entry_count</code></td></tr>
+      <tr><td class="mono">GET /ingestion</td><td>Health of evidence ingestion</td><td>—</td><td><code>last_seq</code>, <code>latest_seq</code>, <code>lag</code>, <code>halted</code>, <code>halt_reason</code>, <code>halt_error</code></td></tr>
+      <tr><td class="mono">GET /operations</td><td>Newest 500 operations</td><td>Query: <code>operation_type</code>, <code>state</code>, <code>asset</code></td><td>List of operation, <code>details</code>, <code>execution</code></td></tr>
+      <tr><td class="mono">GET /operations/:id</td><td>One operation in full</td><td>—</td><td>Operation, <code>details</code>, <code>execution</code>, <code>approvals[]</code>, <code>evidence[]</code>, <code>cage</code>, <code>cage_error</code></td></tr>
+      <tr><td class="mono">POST /fundings</td><td>Propose a funding</td><td><code>asset</code>, <code>amount</code>, <code>reason</code>, <code>risk_context</code>, idempotency key</td><td>The operation in <code>approval_pending</code></td></tr>
+      <tr><td class="mono">POST /sweeps</td><td>Propose a sweep</td><td>Same as funding</td><td>The operation in <code>approval_pending</code></td></tr>
+      <tr><td class="mono">POST /operations/:id/approve</td><td>Approve</td><td><code>reason</code> (optional)</td><td>The operation in <code>approved</code></td></tr>
+      <tr><td class="mono">POST /operations/:id/reject</td><td>Reject</td><td><code>reason</code> (required)</td><td>The operation</td></tr>
+      <tr><td class="mono">POST /operations/:id/cancel</td><td>Proposer withdraws</td><td>—</td><td>The operation in <code>cancelled</code></td></tr>
+      <tr><td class="mono">POST /operations/:id/abandon-leg</td><td>Abandon a stalled operation</td><td><code>reason</code> (required)</td><td>Cage's view of the operation</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="errors">
+    <div class="main">
+      <h2><span class="no">11</span>Error messages</h2>
+      <p class="lede">The backend returns English text in <code>message</code>. The console should show it inside the dialog and keep the dialog open.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">TWO PLACES ERRORS APPEAR</b>Errors on a button click come back at once. Errors from Cage after approval do not: they show up later as <code>failed_terminal</code> or <code>manual_review</code> with an error code on the operation.</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>When</th><th>Message or code</th><th>What the operator should do</th></tr></thead>
+      <tbody>
+      <tr><td>Propose, approve</td><td>this Binance treasury operation type is disabled</td><td>The feature flag is off. Ask engineering.</td></tr>
+      <tr><td>Propose, approve</td><td>the Cage Binance funding profile is not enabled / Cage Binance treasury execution is disabled</td><td>Cage is not ready. Ask engineering.</td></tr>
+      <tr><td>Propose</td><td>invalid Binance treasury request: amount must be between X and Y</td><td>Change the amount.</td></tr>
+      <tr><td>Propose (sweep)</td><td>invalid Binance treasury request: amount exceeds the sweepable transit EOA balance X</td><td>Lower the amount.</td></tr>
+      <tr><td>Propose</td><td>platform finance operation idempotency conflict</td><td>Reopen the dialog and submit again.</td></tr>
+      <tr><td>Approve, reject</td><td>operation proposer cannot approve</td><td>Another person must decide.</td></tr>
+      <tr><td>Approve, reject, cancel</td><td>operation is not awaiting approval</td><td>Someone else already decided, or it expired. Refresh.</td></tr>
+      <tr><td>Approve</td><td>the Cage profile changed after this operation was proposed; reject it and propose again</td><td>Reject and propose again.</td></tr>
+      <tr><td>Approve</td><td>approving would exceed the Cage daily limit for this asset</td><td>Wait until the next UTC day or approve a smaller proposal.</td></tr>
+      <tr><td>Reject, abandon</td><td>decision reason is required</td><td>Fill in the reason.</td></tr>
+      <tr><td>Cancel</td><td>only the proposer can cancel a proposal</td><td>Use Reject instead.</td></tr>
+      <tr><td>Abandon</td><td>LEG_BROADCAST</td><td>The transaction is already out. Wait for it to become final.</td></tr>
+      <tr><td>After approval</td><td>DAILY_LIMIT_EXCEEDED, AMOUNT_OUT_OF_BOUNDS, INVALID_AMOUNT_PRECISION, PROFILE_CHANGED, EXECUTION_DISABLED, WITHDRAWAL_BREAKER_OPEN, INSUFFICIENT_TRANSIT_BALANCE</td><td>Cage refused the operation. It is <code>failed_terminal</code>. Fix the cause and propose again.</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="questions">
+    <div class="main">
+      <h2><span class="no">12</span>Questions to confirm</h2>
+      <p class="lede">Each row states what the backend does today and what this document assumes for the pages. Please mark each one as agreed or give the change you want.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">HOW TO ANSWER</b>Reply with the question number and "agree" or the change. Q14 and Q15 are backend gaps found while reading the code; they need a decision from the backend owner.</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>#</th><th>Topic</th><th>Backend today</th><th>Assumed for the pages</th></tr></thead>
+      <tbody>
+      <tr><td>Q1</td><td>Roles</td><td>All eleven endpoints are granted to role 1. Proposer and approver must be different users, but can hold the same role.</td><td>Keep one role. If proposing and approving must be separate roles, the Casbin rules need a change.</td></tr>
+      <tr><td>Q2</td><td>Where the page lives</td><td>No menu row is added by the PR.</td><td>A new tab on the Platform Finance page.</td></tr>
+      <tr><td>Q3</td><td>Idempotency key</td><td>Required. Same key and same content returns the existing proposal.</td><td>The console creates one key each time the dialog opens and reuses it on a retry of the same submit.</td></tr>
+      <tr><td>Q4</td><td>Reason on approve</td><td>Optional for approve, required for reject and abandon.</td><td>Optional in the UI as well.</td></tr>
+      <tr><td>Q5</td><td>Cancel</td><td>Proposer only, no reason field.</td><td>A plain confirm dialog with no reason.</td></tr>
+      <tr><td>Q6</td><td>Notifications</td><td>None. Nobody is told about a new proposal, an expiry or a stall.</td><td>No notification in the first version. Approvers look at the list.</td></tr>
+      <tr><td>Q7</td><td>List size</td><td>Newest 500, no paging, filters on type, state and asset.</td><td>Enough for the first version.</td></tr>
+      <tr><td>Q8</td><td>Refresh</td><td>No push. The page must poll.</td><td>Poll every 5 seconds while an operation is in progress.</td></tr>
+      <tr><td>Q9</td><td>Who may abandon</td><td>Any user with the endpoint, including the proposer or approver. One person is enough.</td><td>Keep as is, with a required reason and a red confirm button.</td></tr>
+      <tr><td>Q10</td><td>Funds left at the transit address</td><td>They stay there. Recovery is a normal sweep.</td><td>Show a notice with a "Propose sweep" button that pre-fills asset and amount.</td></tr>
+      <tr><td>Q11</td><td>Manual retry</td><td>Dispatch retries on its own, wait doubling up to 5 minutes. There is no "retry now" endpoint.</td><td>No manual retry. Show the next retry time.</td></tr>
+      <tr><td>Q12</td><td>"Used today"</td><td>Two numbers exist: Cage's accepted amount (in the profile), and Admin's approved amount used for the approval check. They can differ briefly.</td><td>Show Cage's number, since Cage enforces the limit.</td></tr>
+      <tr><td>Q13</td><td>Addresses and transactions</td><td>Addresses and hashes are returned as text.</td><td>Show them in full with a copy button and a block explorer link. The explorer base URL needs to be given per network.</td></tr>
+      <tr><td>Q14</td><td>Amount precision <span class="tag a">BACKEND GAP</span></td><td>Admin accepts up to 20 decimal places. Cage refuses more places than the asset has, after approval. The profile does not return the asset's decimals.</td><td>Add <code>decimals</code> to the profile response and check it when proposing. Until then a too-precise amount fails only after approval.</td></tr>
+      <tr><td>Q15</td><td>Breaker and halt visibility <span class="tag a">BACKEND GAP</span></td><td>A funding is refused by Cage when the custody withdrawal breaker is open, but the profile does not return the breaker state. An ingestion halt is exposed only through <code>GET /ingestion</code> and a metric.</td><td>Add the breaker state to the profile so the Propose button can be disabled. Decide who is alerted on a halt.</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="prereq">
+    <div class="main">
+      <h2><span class="no">13</span>Before it can be used</h2>
+      <p class="lede">The backend logic is in place but operators cannot use it yet.</p>
+      <ul class="gate">
+        <li><span class="tag stop">OPEN</span>PR #1868 is not merged. It has changes requested. One review finding is still open and was called a blocker by the reviewer: a column was added by editing a migration that may already have run in some environments.</li>
+        <li><span class="tag stop">OPEN</span>The console pages in this document are not built.</li>
+        <li><span class="tag a">CONFIG</span>Both feature flags in Admin are off by default, and Cage has its own profile and execution flags.</li>
+        <li><span class="tag a">CONFIG</span>Operations has to provide the shared signing key, the transit address and its key, and the asset list in the Cage profile. The sample config has an empty asset list.</li>
+        <li><span class="tag a">OPS</span>The transit address needs gas. Topping it up is not part of this workflow.</li>
+      </ul>
+      <h3>What was verified for this document</h3>
+      <p>Every statement about the backend comes from reading the code of PR #1868 at commit <code>914bb438</code>. Nothing was run: no tests and no environment. The page layouts are proposals and do not exist in code.</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">SOURCE</b>neodax PR #1868, "implement manual A-book treasury rebalancing", base <code>master</code>.</div>
+    </div>
+  </section>
+
+  <div class="foot">Binance treasury transfers: operator interaction · v1 · 2026-11-23 · for confirmation of interaction details.</div>
+</main>
+</div>
+
+<script>
+(function(){
+  var B=document.body, REV=1, KEY='bt-admin-ix-lastSeen';
+  var last=parseInt(localStorage.getItem(KEY)||'0',10);
+  var secs=[].slice.call(document.querySelectorAll('.sec.upd'));
+  secs.forEach(function(s){ if(parseInt(s.dataset.rev,10)<=last) s.classList.remove('fresh'); });
+  document.getElementById('nchg').textContent=secs.length;
+  function bind(id,cls,inv){var el=document.getElementById(id);el.onchange=function(){B.classList.toggle(cls,inv?!el.checked:el.checked)}}
+  bind('t-show','show-changes');
+  bind('t-del','hide-del');
+  bind('t-only','only-changed');
+  document.getElementById('b-log').onclick=function(){document.getElementById('log').classList.toggle('open')};
+  document.getElementById('b-read').onclick=function(){
+    localStorage.setItem(KEY,String(REV));
+    secs.forEach(function(s){s.classList.remove('fresh')});
+    this.textContent='All marked as read';
+  };
+  /* scroll-spy */
+  var links=[].slice.call(document.querySelectorAll('#toc a'));
+  var map={};links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a});
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){links.forEach(function(a){a.classList.remove('on')});var a=map[e.target.id];if(a)a.classList.add('on');}});
+  },{rootMargin:'-20% 0px -70% 0px'});
+  [].forEach.call(document.querySelectorAll('header.hero[id],section.sec[id]'),function(s){io.observe(s)});
+  /* n / p jump between changes */
+  var idx=-1;
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='INPUT')return;
+    var marks=[].slice.call(document.querySelectorAll('ins,del')).filter(function(m){return m.offsetParent!==null});
+    if(!marks.length)return;
+    if(e.key==='n'){idx=Math.min(idx+1,marks.length-1)}else if(e.key==='p'){idx=Math.max(idx-1,0)}else return;
+    marks[idx].scrollIntoView({behavior:'smooth',block:'center'});
+  });
+})();
+</script>
+</body>
+</html>

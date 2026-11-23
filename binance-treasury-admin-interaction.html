@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Binance 资金划转：运营操作与交互</title>
+<style>
+/* spec — long-form design proposal. Three columns on wide screens:
+   sticky TOC | reading column | margin column. Wide tables break out of the text
+   column. Revisions are first-class: ins/del marks, per-section "Updated" pills,
+   margin change notes, a changelog banner and a "since you last read" memory. */
+:root{
+  --bg:#FBFAF7; --card:#fff; --ink:#16181D; --ink2:#4A4D55; --ink3:#8A8C92;
+  --hair:#E4E2DB; --hair2:#EFEDE7; --chip:#F0EEE8; --accent:#1F2A44;
+  --amber:#97690A; --amber-bg:#FBF1DC;
+  --ins:#E3F1E8; --ins-b:#2E7D4F; --del:#F8E3E0; --del-b:#C0392B;
+  --new:#EEE9FB; --new-b:#6A3FB5;
+  --serif:"Noto Serif SC","Songti SC","Source Han Serif SC",Georgia,serif;
+  --sans:Inter,"PingFang SC","Noto Sans SC","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.8 var(--sans)}
+code{font:.86em var(--mono);background:var(--chip);padding:1px 6px;border-radius:3px}
+a{color:var(--accent)}
+/* top bar + changelog banner */
+.bar{position:sticky;top:0;z-index:20;background:rgba(251,250,247,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--hair)}
+.bar .in{max-width:1560px;margin:0 auto;padding:0 32px;height:56px;display:flex;align-items:center;gap:18px}
+.logo{font:600 22px var(--serif)}
+.crumb{padding-left:18px;border-left:1px solid var(--hair);color:var(--ink2);font-size:14px}
+.sp{flex:1}
+.pill{font:600 12px var(--sans);padding:2px 10px;border-radius:99px;background:var(--amber-bg);color:var(--amber);border:1px solid #EBD6A6}
+.lang{font-size:14px;color:var(--ink2);text-decoration:none;border:1px solid var(--hair);border-radius:4px;padding:3px 12px;background:var(--card)}
+.banner{background:var(--amber-bg);border-bottom:1px solid #EBD6A6}
+.banner .in{max-width:1560px;margin:0 auto;padding:12px 32px;display:flex;gap:22px;align-items:center;flex-wrap:wrap;font-size:14px}
+.banner b{font-weight:700}
+.tog{display:inline-flex;align-items:center;gap:6px;cursor:pointer;color:var(--ink2);user-select:none}
+.tog input{accent-color:var(--accent)}
+.btn{border:1px solid #D9C48F;background:#fff;border-radius:4px;padding:3px 12px;font:13px var(--sans);cursor:pointer;color:var(--ink)}
+.chg-list{display:none;max-width:1560px;margin:0 auto;padding:0 32px 14px}
+.chg-list.open{display:block}
+.chg-list table{width:100%;border-collapse:collapse;font-size:13px;background:#fff;border:1px solid #EBD6A6}
+.chg-list th,.chg-list td{padding:6px 12px;border-bottom:1px solid var(--hair2);text-align:left}
+.chg-list th{background:#FFF8E8;font-weight:600}
+/* shell */
+.shell{max-width:1560px;margin:0 auto;padding:0 32px;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.toc{position:sticky;top:112px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding:28px 0}
+.toc .k{font-size:12px;letter-spacing:.08em;color:var(--ink3);margin-bottom:10px}
+.toc a{display:flex;justify-content:space-between;gap:8px;align-items:center;text-decoration:none;color:var(--ink2);font-size:14px;line-height:1.5;padding:6px 10px 6px 12px;border-left:2px solid var(--hair)}
+.toc a:hover{color:var(--ink);background:var(--hair2)}
+.toc a.on{color:var(--ink);font-weight:600;border-left-color:var(--accent);background:var(--card)}
+.toc a .no{font:12px var(--mono);color:var(--ink3);margin-right:8px}
+.toc .b{font:700 10px var(--sans);padding:1px 6px;border-radius:99px;background:var(--ins);color:var(--ins-b);flex-shrink:0}
+.toc .b.new{background:var(--new);color:var(--new-b)}
+body.only-changed .toc a:not([data-ch]){display:none}
+/* article */
+.hero{padding:44px 0 26px;border-bottom:2px solid var(--ink)}
+.hero .eyebrow{font:600 12px var(--sans);letter-spacing:.14em;color:var(--amber)}
+.hero h1{margin:8px 0 8px;font:500 40px/1.25 var(--serif);letter-spacing:.3px}
+.hero p{margin:0;max-width:760px;color:var(--ink2);font-size:17px}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.chip{background:var(--chip);border:1px solid var(--hair);border-radius:3px;padding:2px 11px;font:13px var(--mono);color:var(--ink2)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:36px;margin:28px 0 8px}
+.kpi{border-top:2px solid var(--ink);padding-top:12px}
+.kpi .k{font-size:13px;color:var(--ink2)} .kpi .v{font:500 34px/1.4 var(--serif)} .kpi .v small{font:14px var(--serif);color:var(--ink2);margin-left:4px}
+/* section = reading column + margin column; .wide spans both */
+.sec{display:grid;grid-template-columns:minmax(0,720px) minmax(240px,1fr);column-gap:48px;padding:40px 0 24px;border-bottom:1px solid var(--hair);position:relative}
+.sec>.main{grid-column:1}
+.sec>.margin{grid-column:2;padding-top:6px}
+.sec>.wide{grid-column:1/-1;margin:8px 0 8px;overflow-x:auto;background:var(--card);border:1px solid var(--hair);border-radius:6px}
+.sec h2{margin:0 0 10px;font:500 28px/1.35 var(--serif)}
+.sec h2 .no{font:15px var(--mono);color:var(--ink3);margin-right:12px}
+.sec h3{margin:26px 0 6px;font:600 16px var(--sans)}
+.sec p{margin:0 0 14px}
+.lede{font-size:17px;color:var(--ink2)}
+pre{background:#16181F;color:#E8E6DF;border-radius:6px;padding:14px 18px;overflow:auto;font:13px/1.8 var(--mono);margin:12px 0 16px}
+pre .c{color:#8A8C92}
+/* margin notes */
+.mn{font-size:13px;line-height:1.65;color:var(--ink2);border-left:2px solid var(--hair);padding:2px 0 2px 14px;margin:0 0 18px}
+.mn b.lb{display:block;font-size:11px;letter-spacing:.08em;color:var(--ink3);margin-bottom:2px}
+.mn.chg{border-left-color:var(--ins-b);background:linear-gradient(90deg,#F2F9F5,transparent)}
+.mn.chg b.lb{color:var(--ins-b)}
+.mn.todo{border-left-color:var(--amber)} .mn.todo b.lb{color:var(--amber)}
+/* revision markup */
+.pillrev{display:inline-block;vertical-align:middle;margin-left:12px;font:700 11px var(--sans);letter-spacing:.04em;padding:2px 9px;border-radius:99px;background:var(--ins);color:var(--ins-b)}
+.pillrev.new{background:var(--new);color:var(--new-b)}
+.sec.upd::before{content:"";position:absolute;left:-18px;top:44px;bottom:28px;width:3px;border-radius:3px;background:var(--ins-b);opacity:0}
+.sec.upd.fresh::before{opacity:1}
+.sec.upd.fresh.isnew::before{background:var(--new-b)}
+body:not(.show-changes) .pillrev,body:not(.show-changes) .sec.upd::before{display:none}
+ins{text-decoration:none;background:var(--ins);border-bottom:2px solid var(--ins-b);padding:0 2px}
+del{background:var(--del);color:var(--del-b);text-decoration:line-through;padding:0 2px}
+body:not(.show-changes) ins{background:none;border-bottom:0}
+body:not(.show-changes) del{display:none}
+body.hide-del del{display:none}
+body.only-changed .sec:not(.upd){display:none}
+/* tables */
+table.t{width:100%;border-collapse:collapse;font-size:14px;line-height:1.6}
+table.t th{position:sticky;top:0;background:#FAF9F5;text-align:left;font-weight:600;padding:10px 14px;border-bottom:1px solid var(--ink);white-space:nowrap}
+table.t td{padding:10px 14px;border-bottom:1px solid var(--hair2);vertical-align:top;min-width:160px}
+table.t td:first-child,table.t th:first-child{position:sticky;left:0;background:#fff;font-weight:600;min-width:130px;border-right:1px solid var(--hair2);z-index:1}
+table.t tr:hover td{background:#FDFCF8} table.t tr:hover td:first-child{background:#FDFCF8}
+.tag{display:inline-block;font:500 .72em var(--mono);padding:1px .6em;border-radius:4px;vertical-align:1px;white-space:nowrap}
+.tag.keep{background:#E3F1E8;color:#2E7D4F}.tag.stop{background:#F8E3E0;color:#C0392B}
+.note{border:1px solid var(--hair);background:var(--card);border-radius:6px;padding:12px 16px;margin:14px 0}
+.note h4{margin:0 0 4px;font-size:13px;color:var(--ink3);letter-spacing:.06em}
+.foot{padding:40px 0 80px;color:var(--ink3);font-size:13px}
+@media(max-width:1200px){.shell{grid-template-columns:1fr}.toc{display:none}.sec{grid-template-columns:minmax(0,1fr)}.sec>.margin{grid-column:1;order:3;padding-top:0}}
+@media(max-width:700px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:30px}}
+@media print{.bar,.banner,.toc{display:none}.shell{display:block}ins,del{print-color-adjust:exact}}
+ul.pts{list-style:none;margin:10px 0 14px;padding:0}
+ul.pts li{position:relative;padding:5px 0 5px 22px;color:var(--ink2)}
+ul.pts li::before{content:"";position:absolute;left:6px;top:15px;width:5px;height:5px;border-radius:50%;background:var(--amber)}
+td.mono{font:12.5px/22.4px var(--mono)}
+.tag.a{background:var(--amber-bg);color:var(--amber)}
+ul.gate,ul.check,ol.seq{list-style:none;margin:16px 0;padding:0}
+ul.gate li,ul.check li,ol.seq li{position:relative;border-top:1px solid var(--hair);font-size:14.5px;color:var(--ink2);line-height:1.7}
+ul.gate li:last-child,ul.check li:last-child,ol.seq li:last-child{border-bottom:1px solid var(--hair)}
+ul.gate li{padding:10px 0 10px 84px}ul.gate li .tag{position:absolute;left:0;top:13px}
+ul.check li{padding:10px 0 10px 30px}
+ul.check li::before{content:"";position:absolute;left:2px;top:16px;width:12px;height:12px;border:1.5px solid #CFCCC2;border-radius:3px;background:var(--card)}
+ol.seq{counter-reset:step}
+ol.seq li{counter-increment:step;padding:14px 0 12px 44px}
+ol.seq li::before{content:counter(step,decimal-leading-zero);position:absolute;left:0;top:16px;font:12px var(--mono);color:var(--amber)}
+ol.seq b{display:block;font-weight:600;color:var(--ink);margin-bottom:2px}
+ol.seq span{display:block;font-size:14px}
+.tag.n{background:var(--chip);color:var(--ink2)}
+.wf{border:1px solid var(--hair);border-radius:6px;background:var(--card);padding:14px 18px;margin:14px 0 18px;font-size:13.5px;color:var(--ink2)}
+.wf .ttl{font:600 11px var(--sans);letter-spacing:.08em;color:var(--ink3);margin-bottom:6px}
+.wf .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:7px 0;border-top:1px dashed var(--hair)}
+.wf .row:first-of-type{border-top:0}
+.wf .bx{border:1px solid var(--hair);border-radius:4px;padding:1px 10px;background:var(--bg);font:12px/1.9 var(--mono);color:var(--ink)}
+.wf .bt{border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 12px;font:600 12px/1.9 var(--sans);background:#fff}
+.wf .bt.d{border-color:var(--del-b);color:var(--del-b)}
+.wf .lb2{min-width:128px;color:var(--ink3);font-size:12.5px}
+</style>
+</head>
+<body class="show-changes">
+
+<div class="bar"><div class="in">
+  <div class="logo">Yellow<i style="font-style:normal">.</i></div>
+  <div class="crumb">后管 · Binance 资金划转</div>
+  <div class="sp"></div>
+  <span class="pill">v1 · 待确认</span>
+  <a class="lang" href="binance-treasury-admin-interaction.en.html">English</a>
+</div></div>
+
+<div class="banner"><div class="in">
+  <span><b>v1 · 2026-11-23</b>　初稿，<span id="nchg"></span> 个章节有更新</span>
+  <label class="tog"><input type="checkbox" id="t-show" checked> 显示改动</label>
+  <label class="tog"><input type="checkbox" id="t-del"> 隐藏删除内容</label>
+  <label class="tog"><input type="checkbox" id="t-only"> 只看有改动的章节</label>
+  <button class="btn" id="b-log">改动清单 ⌄</button>
+  <button class="btn" id="b-read">全部标为已读</button>
+  <span style="color:var(--ink3)">快捷键　n 下一处　p 上一处</span>
+</div>
+<div class="chg-list" id="log"><table>
+<tr><th>#</th><th>章节</th><th>改动</th><th>原因</th><th>来源</th></tr>
+<tr><td>—</td><td>全部</td><td>初稿</td><td>开发页面前需要先确认交互细节</td><td>阅读 neodax PR #1868 的代码</td></tr>
+</table></div></div>
+
+<div class="shell">
+<nav class="toc" id="toc">
+  <div class="k">目录</div>
+  <a href="#summary"><span><span class="no">01</span>结论</span></a>
+  <a href="#scope"><span><span class="no">02</span>运营能做什么</span></a>
+  <a href="#page"><span><span class="no">03</span>页面布局</span></a>
+  <a href="#states"><span><span class="no">04</span>状态与可用操作</span></a>
+  <a href="#propose"><span><span class="no">05</span>提案</span></a>
+  <a href="#decide"><span><span class="no">06</span>审批、拒绝、撤销</span></a>
+  <a href="#track"><span><span class="no">07</span>跟踪执行</span></a>
+  <a href="#stalled"><span><span class="no">08</span>人工复核</span></a>
+  <a href="#health"><span><span class="no">09</span>配置与健康状态</span></a>
+  <a href="#api"><span><span class="no">10</span>接口一览</span></a>
+  <a href="#errors"><span><span class="no">11</span>错误提示</span></a>
+  <a href="#questions"><span><span class="no">12</span>待确认的问题</span></a>
+  <a href="#prereq"><span><span class="no">13</span>上线前还缺什么</span></a>
+</nav>
+
+<main>
+  <header class="hero" id="summary">
+    <div class="eyebrow">NEODAX · 后管 · PLATFORM FINANCE</div>
+    <h1>Binance 资金划转：运营操作与交互</h1>
+    <p>运营怎样在后管里把托管资金入金到 Binance 账户，以及怎样把中转地址上的资金扫回托管。neodax PR #1868 的后端已经能支撑整个流程，后管页面还没有开发。本文按真实接口描述建议的页面，供开发前确认交互。第 12 节列出了 15 个需要答复的问题。</p>
+    <div class="chips"><span class="chip">初稿 v1</span><span class="chip">2026-11-23</span><span class="chip">后端：PR #1868，提交 914bb438，未合并</span><span class="chip">前端：未开始</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">后管接口</div><div class="v">11<small>个</small></div></div>
+      <div class="kpi"><div class="k">操作状态</div><div class="v">10<small>种</small></div></div>
+      <div class="kpi"><div class="k">运营可做的操作</div><div class="v">6<small>种</small></div></div>
+      <div class="kpi"><div class="k">待确认问题</div><div class="v">15<small>个</small></div></div>
+    </div>
+  </header>
+
+  <section class="sec" id="scope">
+    <div class="main">
+      <h2><span class="no">02</span>运营能做什么</h2>
+      <p class="lede">划转有两种，每一笔都由一个人提案、另一个人审批。运营只选资产、填金额和原因，其他内容都是固定的。</p>
+      <ul class="pts">
+        <li><strong>入金（Funding）</strong>：托管合约 → 中转地址 → Binance 充值地址，链上两段。</li>
+        <li><strong>扫回（Sweep）</strong>：中转地址 → 托管合约，链上一段。</li>
+      </ul>
+      <h3>运营不能指定的内容</h3>
+      <p>请求里不带地址、网络和密钥。目标地址、所在的链、单笔最小和最大金额、每日限额，都来自 Cage 里固定的一份配置（profile）。后管只负责展示。</p>
+      <h3>六种操作</h3>
+      <ul class="pts">
+        <li>提案入金</li>
+        <li>提案扫回</li>
+        <li>审批别人的提案</li>
+        <li>拒绝别人的提案</li>
+        <li>撤销自己的提案</li>
+        <li>放弃一笔卡住、且当前这一段还没有发出的操作</li>
+      </ul>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">代码依据</b>路由：<code>admin/router/platform_finance.go</code>。处理函数：<code>admin/api/platform_finance/binance_treasury.go</code>。接口类型的注释写明请求不带地址、网络和密钥。</div>
+      <div class="mn"><b class="lb">不属于本流程</b>neodax PR #1775 做的是用户提现的风控审核，和资金划转无关。</div>
+      <div class="mn todo"><b class="lb">待确认 · Q1</b>提案人和审批人按用户区分，不按角色区分。见第 12 节。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="page">
+    <div class="main">
+      <h2><span class="no">03</span>页面布局</h2>
+      <p class="lede">建议在现有的 Platform Finance 页面上加一个 "Binance Treasury" 标签页，和 Spot Credit 并列，不需要新增菜单。</p>
+      <p>页面从上到下分四块，每块对应一个读取接口。</p>
+      <div class="wf">
+        <div class="ttl">PLATFORM FINANCE · BINANCE TREASURY</div>
+        <div class="row"><span class="lb2">A. 健康状态条</span><span class="bx">执行：开启</span><span class="bx">Gas：OK</span><span class="bx">余额：最新</span><span class="bx">证据延迟：0</span></div>
+        <div class="row"><span class="lb2">B. 配置</span><span class="bx">binance-main</span><span class="bx">网络</span><span class="bx">中转地址</span><span class="bx">托管地址</span></div>
+        <div class="row"><span class="lb2">C. 资产</span><span class="bx">USDT</span><span class="bx">最小 / 最大</span><span class="bx">今日已用 / 每日限额</span><span class="bx">中转地址余额</span><span class="bx">可扫回</span><span class="bx">净入金</span></div>
+        <div class="row"><span class="lb2">D. 操作列表</span><span class="bx">类型 ▾</span><span class="bx">状态 ▾</span><span class="bx">资产 ▾</span><span class="sp"></span><span class="bt">提案入金</span><span class="bt">提案扫回</span></div>
+        <div class="row"><span class="lb2"></span><span class="bx">创建时间</span><span class="bx">类型</span><span class="bx">资产</span><span class="bx">金额</span><span class="bx">状态</span><span class="bx">提案人</span><span class="bx">审批人</span><span class="bx">Cage 状态</span><span class="bx">最近错误</span></div>
+      </div>
+      <p>点击列表里的一行打开操作详情（第 07 节）。当对应的功能开关关闭，或 Cage 报告执行被禁用时，两个提案按钮置灰，并显示原因。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">现有页面</b>dashboard 里已经有 <code>pages/platformFinance/SpotCreditPage.tsx</code>，带标签页和一个有 Approve、Reject 的操作详情弹窗。新标签页可以照这个写法。</div>
+      <div class="mn"><b class="lb">数据来源</b>A、B 和 C 里的限额：<code>GET /profile</code>。A 里的证据延迟：<code>GET /ingestion</code>。C 里的净入金：<code>GET /flows</code>。D：<code>GET /operations</code>。</div>
+      <div class="mn todo"><b class="lb">待确认 · Q2、Q7</b>用标签页还是单独的菜单。列表最多返回最新的 500 条，不分页。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="states">
+    <div class="main">
+      <h2><span class="no">04</span>状态与可用操作</h2>
+      <p class="lede">一笔操作在 Admin 里有十种状态，只有第一种接受人的决定。审批通过之后全部自动进行，直到完成、失败或卡住。</p>
+<pre>approval_pending ─ 审批 ─▶ approved ─ 派发 ─▶ executing ─▶ completed
+  ├─ 拒绝 ─▶ rejected
+  ├─ 撤销 ─▶ cancelled
+  └─ 24 小时 ─▶ expired
+
+approved      ─▶ failed_retryable ─ 自动重试 ─▶ executing
+approved      ─▶ failed_terminal   <span class="c"># Cage 拒绝</span>
+executing     ─▶ manual_review     <span class="c"># Cage 报告卡住</span>
+manual_review ─ 放弃 ─▶ failed_terminal
+manual_review ─ 这一段有了进展 ─▶ executing
+executing     ─▶ failed_terminal   <span class="c"># 某一段彻底失败</span></pre>
+      <p>接口里的状态值是小写字符串，例如 <code>approval_pending</code>。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">代码依据</b>状态常量：<code>admin/model/platform_finance.go:10-19</code>。根据 Cage 证据推进状态：<code>admin/service/platform_finance/binance_treasury.go</code> 的 <code>applyEvidenceTransition</code>。</div>
+      <div class="mn"><b class="lb">有两个状态字段</b>页面显示哪些按钮，由上面的 Admin 状态决定。Cage 另有一套更细的状态（<code>LEG1_IN_PROGRESS</code> 等），作为补充信息展示。</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>Admin 状态</th><th>含义</th><th>怎样进入</th><th>运营可做的操作</th><th>页面显示什么</th></tr></thead>
+      <tbody>
+      <tr><td>approval_pending</td><td>等待第二个人决定</td><td>创建提案</td><td>其他人：审批、拒绝。提案人：撤销</td><td>距离 24 小时过期还剩多久</td></tr>
+      <tr><td>approved</td><td>已审批，等待发给 Cage</td><td>审批通过</td><td>无</td><td>正常只持续约 2 秒</td></tr>
+      <tr><td>executing</td><td>Cage 已受理，正在划转</td><td>Cage 受理，或某一段已发出、已确认</td><td>无</td><td>各段的交易哈希和确认数</td></tr>
+      <tr><td>failed_retryable</td><td>发给 Cage 失败，之后可能成功</td><td>派发时超时或网络错误</td><td>无</td><td>已尝试次数、最近错误、下次重试时间</td></tr>
+      <tr><td>manual_review</td><td>Cage 报告这笔操作卡住了</td><td>收到 <code>OPERATION_STALLED</code> 证据</td><td>放弃，前提是当前这一段从未发出</td><td>卡住的原因，资金是否在中转地址</td></tr>
+      <tr><td>completed</td><td>所有段都已在链上最终确认</td><td>收到 <code>OPERATION_COMPLETED</code> 证据</td><td>无</td><td>最终交易，金额计入净流量</td></tr>
+      <tr><td>failed_terminal</td><td>不会再继续</td><td>Cage 拒绝、某一段彻底失败，或被放弃</td><td>无。仍然需要的话重新提案</td><td>错误码和错误信息</td></tr>
+      <tr><td>rejected</td><td>被第二个人拒绝</td><td>拒绝</td><td>无</td><td>谁拒绝的，原因是什么</td></tr>
+      <tr><td>cancelled</td><td>提案人自己撤回</td><td>撤销</td><td>无</td><td>—</td></tr>
+      <tr><td>expired</td><td>24 小时内没人决定</td><td>后台任务</td><td>无</td><td>—</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="propose">
+    <div class="main">
+      <h2><span class="no">05</span>提案</h2>
+      <p class="lede">两种划转共用一个弹窗，类型由打开它的按钮决定。</p>
+      <div class="wf">
+        <div class="ttl">提案入金（托管 → BINANCE）· 数值为示例</div>
+        <div class="row"><span class="lb2">资产</span><span class="bx">USDT ▾</span><span>只能选配置里有的资产</span></div>
+        <div class="row"><span class="lb2">金额</span><span class="bx">250000</span><span>最小 1,000 · 最大 500,000 · 今日剩余 750,000</span></div>
+        <div class="row"><span class="lb2">原因（必填）</span><span class="bx">为 ANTUSDT 补充对冲保证金</span></div>
+        <div class="row"><span class="lb2">风险背景（选填）</span><span class="bx">自由文本，会展示给审批人</span></div>
+        <div class="row"><span class="lb2">只读信息</span><span class="bx">目标：Binance 充值地址 0x…</span><span class="bx">网络</span><span class="bx">配置 binance-main</span></div>
+        <div class="row"><span class="sp"></span><span class="bt">取消</span><span class="bt">提交提案</span></div>
+      </div>
+      <h3>提交时后端检查什么</h3>
+      <ol class="seq">
+        <li><b>功能开关</b><span>入金和扫回各有一个开关。开关关闭时请求失败。</span></li>
+        <li><b>必填项</b><span>资产和原因不能为空，金额必须大于 0。</span></li>
+        <li><b>Cage 配置</b><span>配置必须已启用，执行必须开启，资产必须在配置里。</span></li>
+        <li><b>金额范围</b><span>在该资产的最小值和最大值之间。</span></li>
+        <li><b>仅扫回：可扫回余额</b><span>不超过中转地址的可扫回余额（Cage 已知余额时才检查）。</span></li>
+        <li><b>幂等键</b><span>必填。同一个键加同样的内容，返回已有的提案。同一个键加不同的内容，报冲突。</span></li>
+      </ol>
+      <p>提案时<strong>不检查</strong>每日限额。它在审批时预检，最终由 Cage 控制。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">请求</b><code>POST /fundings</code> 或 <code>POST /sweeps</code>，字段为 <code>asset</code>、<code>amount</code>（十进制字符串）、<code>reason</code>，可选 <code>risk_context</code>。幂等键放在 <code>Idempotency-Key</code> 请求头或 <code>idempotency_key</code> 字段里。</div>
+      <div class="mn"><b class="lb">提案时固定下来的内容</b>配置 ID、配置指纹、链 ID 和网络随提案一起保存。之后配置如果变了，审批会被拒绝。</div>
+      <div class="mn todo"><b class="lb">待确认 · Q3、Q14</b>幂等键由后管页面生成。这一步不检查金额的小数位数（后端缺口）。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="decide">
+    <div class="main">
+      <h2><span class="no">06</span>审批、拒绝、撤销</h2>
+      <p class="lede">三者都只对 <code>approval_pending</code> 状态的操作有效，按钮放在操作详情里。</p>
+      <h3>审批</h3>
+      <ul class="check">
+        <li>审批人不是提案人。</li>
+        <li>这种划转的功能开关仍然开着。</li>
+        <li>Cage 配置仍然启用，配置 ID 和指纹与提案时保存的一致。</li>
+        <li>这种划转、这个资产今天已审批的金额，加上本笔金额，不超过每日限额。</li>
+      </ul>
+      <p>审批记录、状态变更和"发给 Cage"的消息写在同一个数据库事务里。审批的原因是选填的。</p>
+      <h3>拒绝</h3>
+      <p>必须填原因。提案人不能拒绝自己的提案，只能撤销。</p>
+      <h3>撤销</h3>
+      <p>只有提案人可以撤销。接口没有原因字段。</p>
+      <h3>过期</h3>
+      <p>没人处理的提案在创建 24 小时后变成 <code>expired</code>。这是后台任务做的，所以到期后几秒内状态会变。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">这里的每日限额只是预检</b>两个审批人同时操作时，可能都通过这项检查。真正的限额由 Cage 在加锁的情况下控制。后到的那一笔会被 Cage 拒绝，最终是 <code>failed_terminal</code>，错误码 <code>DAILY_LIMIT_EXCEEDED</code>。不会多划出资金。</div>
+      <div class="mn"><b class="lb">代码依据</b><code>ApproveBinanceTreasury</code>，然后是 <code>approveOperation</code>（<code>service.go:87-130</code>，outbox 记录在第 124 行）。</div>
+      <div class="mn todo"><b class="lb">待确认 · Q4、Q5、Q6</b>页面上审批要不要强制填原因，撤销要不要原因，要不要通知相关人。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="track">
+    <div class="main">
+      <h2><span class="no">07</span>跟踪执行</h2>
+      <p class="lede">审批通过之后不需要任何人点击。运营在操作详情里看进度。</p>
+      <ol class="seq">
+        <li><b>派发，约 2 秒内</b><span>Admin 的后台任务把已审批的操作发给 Cage，并用双方共享的密钥签名。同一时间只有一个 Admin 副本在做这件事。</span></li>
+        <li><b>Cage 受理或拒绝</b><span>Cage 先验证签名，再检查配置、金额范围、每日限额；扫回还要检查可扫回余额；入金还要检查托管提现熔断器没有打开。被拒绝的操作变成 <code>failed_terminal</code>。</span></li>
+        <li><b>入金第 1 段：托管 → 中转地址</b><span>Cage 发起一笔托管提现到中转地址，并等它最终确认。</span></li>
+        <li><b>入金第 2 段：中转地址 → Binance</b><span>中转地址把代币转到 Binance 充值地址。交易迟迟没有打包时，Cage 会提高手续费，直到配置的上限。</span></li>
+        <li><b>扫回：只有一段</b><span>中转地址把代币转回托管。</span></li>
+        <li><b>完成</b><span>最后一段最终确认后，金额计入净流量，只计一次。</span></li>
+      </ol>
+      <h3>操作详情</h3>
+      <div class="wf">
+        <div class="ttl">操作 7f3a… · 入金 · USDT 250,000 · 数值为示例</div>
+        <div class="row"><span class="lb2">状态</span><span class="bx">executing</span><span class="bx">Cage：LEG2_IN_PROGRESS</span><span class="bx">资金在中转地址：是</span></div>
+        <div class="row"><span class="lb2">人员</span><span class="bx">提案人 alice</span><span class="bx">审批人 bob</span><span class="bx">审批时间 10:02:11 UTC</span></div>
+        <div class="row"><span class="lb2">第 1 段</span><span class="bx">CUSTODY_TO_EOA</span><span class="bx">FINAL</span><span class="bx">交易 0x…</span><span class="bx">12 个确认</span></div>
+        <div class="row"><span class="lb2">第 2 段</span><span class="bx">EOA_TO_BINANCE</span><span class="bx">SUBMITTED</span><span class="bx">交易 0x…</span><span class="bx">尝试 1 次</span><span class="bx">回滚 0 / 2</span></div>
+        <div class="row"><span class="lb2">时间线</span><span class="bx">已受理</span><span class="bx">第 1 段已发出</span><span class="bx">第 1 段已确认</span><span class="bx">第 2 段已发出</span></div>
+        <div class="row"><span class="lb2">原因</span><span>为 ANTUSDT 补充对冲保证金</span></div>
+      </div>
+      <p>状态是 <code>approved</code>、<code>executing</code>、<code>failed_retryable</code> 或 <code>manual_review</code> 时，详情定时刷新；到了终态就停止。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">数据来源</b><code>GET /operations/:id</code> 返回操作本身、解析后的明细、执行记录、审批记录、Admin 里保存的证据时间线，以及从 Cage 实时读到的操作和各段状态。实时读取失败时接口仍然返回，并在 <code>cage_error</code> 里写明原因。</div>
+      <div class="mn"><b class="lb">Cage 的状态</b>操作：<code>ACCEPTED</code>、<code>LEG1_IN_PROGRESS</code>、<code>LEG2_IN_PROGRESS</code>、<code>SWEEP_IN_PROGRESS</code>、<code>STALLED</code>、<code>COMPLETED</code>、<code>FAILED_TERMINAL</code>、<code>ABANDONED</code>。每一段：<code>PENDING</code>、<code>SUBMITTED</code>、<code>INCLUDED</code>、<code>FINAL</code>、<code>FAILED</code>、<code>ABANDONED</code>。</div>
+      <div class="mn"><b class="lb">派发失败的重试</b>自动进行，等待时间从 1 秒开始翻倍，最长 5 分钟。同一笔操作重复发送不会产生第二笔划转，因为 Cage 认操作 ID。</div>
+      <div class="mn todo"><b class="lb">待确认 · Q8、Q11、Q13</b>刷新间隔，要不要"立即重试"按钮，要不要区块浏览器链接。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="stalled">
+    <div class="main">
+      <h2><span class="no">08</span>人工复核</h2>
+      <p class="lede">Cage 报告操作卡住时，状态变成 <code>manual_review</code>。这是审批之后唯一允许人工操作的状态。</p>
+      <h3>什么情况会卡住</h3>
+      <ul class="pts">
+        <li>某一段因为同一类错误持续失败，超过了配置的时间（示例配置是 30 分钟）。</li>
+        <li>中转地址发出的交易被打包但执行失败，次数超过了允许值（示例配置是 2 次）。</li>
+      </ul>
+      <p>卡住的操作 Cage 仍然会继续尝试。如果这一段之后有了进展，操作会自己回到 <code>executing</code>。</p>
+      <h3>放弃</h3>
+      <div class="wf">
+        <div class="ttl">放弃卡住的操作 · 数值为示例</div>
+        <div class="row"><span class="lb2">卡住的原因</span><span class="bx">WITHDRAWAL_BREAKER_OPEN</span><span>托管提现熔断器处于打开状态</span></div>
+        <div class="row"><span class="lb2">当前这一段</span><span class="bx">CUSTODY_TO_EOA</span><span class="bx">PENDING</span><span class="bx">从未发出</span></div>
+        <div class="row"><span class="lb2">原因（必填）</span><span class="bx">熔断器今天不会关闭，明天重新提案</span></div>
+        <div class="row"><span class="sp"></span><span class="bt">关闭</span><span class="bt d">放弃</span></div>
+      </div>
+      <ul class="check">
+        <li>Admin 状态是 <code>manual_review</code>，Cage 状态是 <code>STALLED</code>。</li>
+        <li>当前这一段从未签名、从未发出。如果已经发出，Cage 会以 <code>LEG_BROADCAST</code> 拒绝：这笔交易必须等到最终确认，不能放弃。</li>
+        <li>填写了原因。</li>
+      </ul>
+      <p>放弃之后操作变成 <code>failed_terminal</code>。如果没有任何一段已经最终确认，这笔金额会从当日已用额度里退回。</p>
+      <h3>留在中转地址上的资金</h3>
+      <p>入金在第 1 段确认之后被放弃或失败，资金就停在中转地址上，不会自动处理。把它取回来要走一次普通的扫回：一个人提案，另一个人审批。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">代码依据</b>Admin：<code>AbandonBinanceTreasuryLeg</code>。Cage：<code>cage/binancetreasury/service.go</code> 的 <code>Service.Abandon</code>。放弃请求和派发请求一样带签名。</div>
+      <div class="mn"><b class="lb">会自动重试的错误码</b><code>WITHDRAWAL_BREAKER_OPEN</code>、<code>CUSTODY_SUBMISSION_PAUSED</code>、<code>FEE_CAP_REACHED</code>、<code>STUCK_MAX_FEE_BUMPS</code>、<code>INCLUDED_TX_REVERTED</code>、<code>REORGED</code>、<code>REORG_SUSPECTED</code>、<code>PROFILE_CHANGED</code>、<code>ASSET_NOT_IN_PROFILE</code>。</div>
+      <div class="mn todo"><b class="lb">待确认 · Q9、Q10</b>放弃只需要一个人。资金留在中转地址时，页面要不要提供预填好的扫回提案。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="health">
+    <div class="main">
+      <h2><span class="no">09</span>配置与健康状态</h2>
+      <p class="lede">页面顶部要让运营在提案之前就知道，现在发起划转能不能成功。</p>
+      <h3>每个资产显示</h3>
+      <ul class="pts">
+        <li>单笔最小和最大金额。</li>
+        <li>每日限额和今日已用，入金和扫回分开。</li>
+        <li>中转地址上的余额，以及其中可以扫回的部分。</li>
+        <li>在途金额：第 1 段已确认、第 2 段还没确认的入金。</li>
+        <li>净入金：已确认转出减去已确认扫回。它记录的是经过这个流程的资金，不是 Binance 账户余额，可以是负数。</li>
+      </ul>
+      <h3>页面必须显示的提醒</h3>
+      <ul class="gate">
+        <li><span class="tag stop">阻断</span>Cage 的执行被禁用，或配置没有启用。提案会被拒绝。</li>
+        <li><span class="tag stop">阻断</span>证据读取已停止。在工程师处理之前，页面上的状态可能不是最新的。要显示停止的原因和卡住的那条证据。</li>
+        <li><span class="tag a">警告</span>中转地址的 Gas 状态是 <code>LOW</code> 或 <code>BELOW_RESERVE</code>。从它发出的转账可能发不出去。</li>
+        <li><span class="tag a">警告</span>余额过期或未知。显示的可扫回金额可能不准。</li>
+        <li><span class="tag a">警告</span>证据延迟持续大于 0。</li>
+      </ul>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">Gas 状态</b>取值为 <code>OK</code>、<code>LOW</code>、<code>BELOW_RESERVE</code>、<code>UNKNOWN</code>。给中转地址充 Gas 不在这个流程里。</div>
+      <div class="mn"><b class="lb">证据读取停止</b>当一条证据指向 Admin 没有派发过的操作，或和已审批的内容对不上时，Admin 会停止读取，不会自己跳过。<code>GET /ingestion</code> 返回 <code>halted</code>、<code>halt_reason</code>（<code>unknown_operation</code>、<code>evidence_drift</code>、<code>apply_error</code>）、<code>halted_event_id</code> 和 <code>lag</code>。</div>
+      <div class="mn todo"><b class="lb">待确认 · Q12、Q15</b>"今日已用"显示哪个数字，证据读取停止时通知谁。</div>
+    </div>
+  </section>
+
+  <section class="sec" id="api">
+    <div class="main">
+      <h2><span class="no">10</span>接口一览</h2>
+      <p class="lede">所有路径都在 admin-service 的 <code>/platform-finance/binance-treasury</code> 下，需要登录的后管账号和 Casbin 授权。PR #1868 的迁移把这 11 个接口都授权给了角色 1。</p>
+      <p>返回格式和其他后管接口一样：成功时 <code>code</code> 为 0；失败时 <code>message</code> 是第 11 节里的文字。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">字段名的大小写</b>操作本身的字段是首字母大写的（<code>ID</code>、<code>State</code>、<code>OperationType</code>、<code>ProposerUsername</code>、<code>CreatedAt</code>），因为 Go 结构体没有写 JSON 标签。嵌套的 <code>details</code>、<code>execution</code>、<code>approvals</code>、<code>evidence</code>、<code>cage</code> 是下划线小写。dashboard 现有的 <code>PlatformFinanceOperation</code> 类型已经是这样写的。</div>
+      <div class="mn"><b class="lb">不对外</b>admin-service 只能在内部网络访问，这些接口都不暴露到公网。</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>方法和路径</th><th>用途</th><th>输入</th><th>返回</th></tr></thead>
+      <tbody>
+      <tr><td class="mono">GET /profile</td><td>配置、中转地址余额、Gas 状态、每个资产的限额和用量</td><td>—</td><td><code>configured</code>、<code>execution_enabled</code>、<code>profile_id</code>、<code>fingerprint</code>、<code>network</code>、<code>transit_eoa_address</code>、<code>custody_address</code>、<code>gas_status</code>、<code>balances_stale</code>、<code>assets[]</code></td></tr>
+      <tr><td class="mono">GET /flows</td><td>每个资产的净流量</td><td>—</td><td><code>confirmed_outbound</code>、<code>confirmed_returned</code>、<code>net_transferred_to_binance</code>、<code>entry_count</code></td></tr>
+      <tr><td class="mono">GET /ingestion</td><td>证据读取的健康状态</td><td>—</td><td><code>last_seq</code>、<code>latest_seq</code>、<code>lag</code>、<code>halted</code>、<code>halt_reason</code>、<code>halt_error</code></td></tr>
+      <tr><td class="mono">GET /operations</td><td>最新的 500 条操作</td><td>查询参数：<code>operation_type</code>、<code>state</code>、<code>asset</code></td><td>操作、<code>details</code>、<code>execution</code> 的列表</td></tr>
+      <tr><td class="mono">GET /operations/:id</td><td>单笔操作的全部信息</td><td>—</td><td>操作、<code>details</code>、<code>execution</code>、<code>approvals[]</code>、<code>evidence[]</code>、<code>cage</code>、<code>cage_error</code></td></tr>
+      <tr><td class="mono">POST /fundings</td><td>提案入金</td><td><code>asset</code>、<code>amount</code>、<code>reason</code>、<code>risk_context</code>、幂等键</td><td><code>approval_pending</code> 状态的操作</td></tr>
+      <tr><td class="mono">POST /sweeps</td><td>提案扫回</td><td>同入金</td><td><code>approval_pending</code> 状态的操作</td></tr>
+      <tr><td class="mono">POST /operations/:id/approve</td><td>审批</td><td><code>reason</code>（选填）</td><td><code>approved</code> 状态的操作</td></tr>
+      <tr><td class="mono">POST /operations/:id/reject</td><td>拒绝</td><td><code>reason</code>（必填）</td><td>操作</td></tr>
+      <tr><td class="mono">POST /operations/:id/cancel</td><td>提案人撤销</td><td>—</td><td><code>cancelled</code> 状态的操作</td></tr>
+      <tr><td class="mono">POST /operations/:id/abandon-leg</td><td>放弃卡住的操作</td><td><code>reason</code>（必填）</td><td>Cage 里的操作状态</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="errors">
+    <div class="main">
+      <h2><span class="no">11</span>错误提示</h2>
+      <p class="lede">后端在 <code>message</code> 里返回英文文字。页面应该把它显示在弹窗里，并保持弹窗打开。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">错误出现在两个地方</b>点击按钮时的错误会立刻返回。审批之后来自 Cage 的错误不会立刻返回：它们之后体现为 <code>failed_terminal</code> 或 <code>manual_review</code> 状态，并在操作上带一个错误码。</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>什么时候</th><th>错误文字或错误码</th><th>运营应该怎么做</th></tr></thead>
+      <tbody>
+      <tr><td>提案、审批</td><td>this Binance treasury operation type is disabled</td><td>功能开关没开，找工程师。</td></tr>
+      <tr><td>提案、审批</td><td>the Cage Binance funding profile is not enabled / Cage Binance treasury execution is disabled</td><td>Cage 没准备好，找工程师。</td></tr>
+      <tr><td>提案</td><td>invalid Binance treasury request: amount must be between X and Y</td><td>改金额。</td></tr>
+      <tr><td>提案（扫回）</td><td>invalid Binance treasury request: amount exceeds the sweepable transit EOA balance X</td><td>降低金额。</td></tr>
+      <tr><td>提案</td><td>platform finance operation idempotency conflict</td><td>重新打开弹窗再提交。</td></tr>
+      <tr><td>审批、拒绝</td><td>operation proposer cannot approve</td><td>必须由另一个人处理。</td></tr>
+      <tr><td>审批、拒绝、撤销</td><td>operation is not awaiting approval</td><td>已经有人处理过，或已过期。刷新页面。</td></tr>
+      <tr><td>审批</td><td>the Cage profile changed after this operation was proposed; reject it and propose again</td><td>拒绝后重新提案。</td></tr>
+      <tr><td>审批</td><td>approving would exceed the Cage daily limit for this asset</td><td>等到下一个 UTC 日，或先审批金额更小的提案。</td></tr>
+      <tr><td>拒绝、放弃</td><td>decision reason is required</td><td>填写原因。</td></tr>
+      <tr><td>撤销</td><td>only the proposer can cancel a proposal</td><td>改用拒绝。</td></tr>
+      <tr><td>放弃</td><td>LEG_BROADCAST</td><td>交易已经发出，等它最终确认。</td></tr>
+      <tr><td>审批之后</td><td>DAILY_LIMIT_EXCEEDED、AMOUNT_OUT_OF_BOUNDS、INVALID_AMOUNT_PRECISION、PROFILE_CHANGED、EXECUTION_DISABLED、WITHDRAWAL_BREAKER_OPEN、INSUFFICIENT_TRANSIT_BALANCE</td><td>Cage 拒绝了这笔操作，状态是 <code>failed_terminal</code>。排除原因后重新提案。</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="questions">
+    <div class="main">
+      <h2><span class="no">12</span>待确认的问题</h2>
+      <p class="lede">每一行写明后端现在的行为，以及本文对页面的假设。请逐条回复"同意"，或写出要改成什么。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">怎么回复</b>回复问题编号加"同意"或修改意见即可。Q14 和 Q15 是读代码时发现的后端缺口，需要后端负责人决定。</div>
+    </div>
+    <div class="wide"><table class="t">
+      <thead><tr><th>#</th><th>主题</th><th>后端现在的行为</th><th>本文对页面的假设</th></tr></thead>
+      <tbody>
+      <tr><td>Q1</td><td>角色</td><td>11 个接口都授权给了角色 1。提案人和审批人必须是不同用户，但可以是同一个角色。</td><td>保持一个角色。如果要求提案和审批是不同角色，需要改 Casbin 规则。</td></tr>
+      <tr><td>Q2</td><td>页面放在哪</td><td>PR 没有新增菜单。</td><td>在 Platform Finance 页面里加一个标签页。</td></tr>
+      <tr><td>Q3</td><td>幂等键</td><td>必填。同一个键加同样内容，返回已有的提案。</td><td>每次打开弹窗由页面生成一个键，同一次提交重试时复用。</td></tr>
+      <tr><td>Q4</td><td>审批的原因</td><td>审批选填，拒绝和放弃必填。</td><td>页面上也是选填。</td></tr>
+      <tr><td>Q5</td><td>撤销</td><td>只有提案人可以，没有原因字段。</td><td>一个普通的确认框，不填原因。</td></tr>
+      <tr><td>Q6</td><td>通知</td><td>没有。新提案、过期、卡住都不会通知任何人。</td><td>第一版不做通知，审批人自己看列表。</td></tr>
+      <tr><td>Q7</td><td>列表条数</td><td>最新 500 条，不分页，可按类型、状态、资产筛选。</td><td>第一版够用。</td></tr>
+      <tr><td>Q8</td><td>刷新</td><td>后端不推送，页面只能轮询。</td><td>操作进行中时每 5 秒刷新一次。</td></tr>
+      <tr><td>Q9</td><td>谁可以放弃</td><td>有这个接口权限的任何用户，包括提案人和审批人。一个人就够。</td><td>保持现状，必须填原因，用红色确认按钮。</td></tr>
+      <tr><td>Q10</td><td>留在中转地址的资金</td><td>留在原地。取回要走普通的扫回。</td><td>显示提示，并提供"提案扫回"按钮，预填资产和金额。</td></tr>
+      <tr><td>Q11</td><td>手动重试</td><td>派发会自动重试，等待时间翻倍，最长 5 分钟。没有"立即重试"的接口。</td><td>不做手动重试，只显示下次重试时间。</td></tr>
+      <tr><td>Q12</td><td>"今日已用"</td><td>有两个数字：Cage 已受理的金额（在 profile 里），和 Admin 审批预检用的已审批金额。两者可能短暂不一致。</td><td>显示 Cage 的数字，因为限额由 Cage 控制。</td></tr>
+      <tr><td>Q13</td><td>地址和交易</td><td>地址和哈希以文本返回。</td><td>完整显示，带复制按钮和区块浏览器链接。每个网络的浏览器地址需要提供。</td></tr>
+      <tr><td>Q14</td><td>金额小数位数 <span class="tag a">后端缺口</span></td><td>Admin 接受最多 20 位小数。小数位数超过资产精度时，Cage 在审批之后才拒绝。profile 不返回资产的小数位数。</td><td>在 profile 返回里加 <code>decimals</code>，并在提案时检查。在这之前，位数超了的金额要到审批之后才失败。</td></tr>
+      <tr><td>Q15</td><td>熔断器和读取停止的可见性 <span class="tag a">后端缺口</span></td><td>托管提现熔断器打开时，入金会被 Cage 拒绝，但 profile 不返回熔断器状态。证据读取停止只能通过 <code>GET /ingestion</code> 和一个监控指标看到。</td><td>在 profile 里加熔断器状态，页面据此把提案按钮置灰。另外要定证据读取停止时通知谁。</td></tr>
+      </tbody></table></div>
+  </section>
+
+  <section class="sec" id="prereq">
+    <div class="main">
+      <h2><span class="no">13</span>上线前还缺什么</h2>
+      <p class="lede">后端逻辑已经具备，但运营现在还用不了。</p>
+      <ul class="gate">
+        <li><span class="tag stop">未完成</span>PR #1868 还没有合并，评审状态是要求修改。还有一条评审意见没关闭，评审人把它定为阻塞项：有一列是通过修改已有的迁移文件加上的，这个迁移在某些环境里可能已经执行过。</li>
+        <li><span class="tag stop">未完成</span>本文描述的后管页面还没有开发。</li>
+        <li><span class="tag a">配置</span>Admin 的两个功能开关默认关闭，Cage 还有自己的配置开关和执行开关。</li>
+        <li><span class="tag a">配置</span>运维需要准备双方共享的签名密钥、中转地址及其密钥，以及 Cage 配置里的资产列表。示例配置里资产列表是空的。</li>
+        <li><span class="tag a">运维</span>中转地址上要有 Gas。给它充 Gas 不在这个流程里。</li>
+      </ul>
+      <h3>本文核实了什么</h3>
+      <p>文中关于后端的每一条都来自阅读 PR #1868 在提交 <code>914bb438</code> 上的代码。没有运行任何东西：没有跑测试，也没有在环境里实际操作。页面布局是建议，代码里还不存在。</p>
+    </div>
+    <div class="margin">
+      <div class="mn"><b class="lb">来源</b>neodax PR #1868，"implement manual A-book treasury rebalancing"，目标分支 <code>master</code>。</div>
+    </div>
+  </section>
+
+  <div class="foot">Binance 资金划转：运营操作与交互 · v1 · 2026-11-23 · 用于确认交互细节。</div>
+</main>
+</div>
+
+<script>
+(function(){
+  var B=document.body, REV=1, KEY='bt-admin-ix-lastSeen';
+  var last=parseInt(localStorage.getItem(KEY)||'0',10);
+  var secs=[].slice.call(document.querySelectorAll('.sec.upd'));
+  secs.forEach(function(s){ if(parseInt(s.dataset.rev,10)<=last) s.classList.remove('fresh'); });
+  document.getElementById('nchg').textContent=secs.length;
+  function bind(id,cls,inv){var el=document.getElementById(id);el.onchange=function(){B.classList.toggle(cls,inv?!el.checked:el.checked)}}
+  bind('t-show','show-changes');
+  bind('t-del','hide-del');
+  bind('t-only','only-changed');
+  document.getElementById('b-log').onclick=function(){document.getElementById('log').classList.toggle('open')};
+  document.getElementById('b-read').onclick=function(){
+    localStorage.setItem(KEY,String(REV));
+    secs.forEach(function(s){s.classList.remove('fresh')});
+    this.textContent='已全部标为已读';
+  };
+  /* scroll-spy */
+  var links=[].slice.call(document.querySelectorAll('#toc a'));
+  var map={};links.forEach(function(a){map[a.getAttribute('href').slice(1)]=a});
+  var io=new IntersectionObserver(function(es){
+    es.forEach(function(e){ if(e.isIntersecting){links.forEach(function(a){a.classList.remove('on')});var a=map[e.target.id];if(a)a.classList.add('on');}});
+  },{rootMargin:'-20% 0px -70% 0px'});
+  [].forEach.call(document.querySelectorAll('header.hero[id],section.sec[id]'),function(s){io.observe(s)});
+  /* n / p jump between changes */
+  var idx=-1;
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='INPUT')return;
+    var marks=[].slice.call(document.querySelectorAll('ins,del')).filter(function(m){return m.offsetParent!==null});
+    if(!marks.length)return;
+    if(e.key==='n'){idx=Math.min(idx+1,marks.length-1)}else if(e.key==='p'){idx=Math.max(idx-1,0)}else return;
+    marks[idx].scrollIntoView({behavior:'smooth',block:'center'});
+  });
+})();
+</script>
+</body>
+</html>
