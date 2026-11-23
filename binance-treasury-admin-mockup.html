@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Binance treasury · interactive mockup</title>
+<style>
+:root{--blue:#1976d2;--blue-d:#1259a8;--bg:#f3f4f6;--paper:#fff;--ink:#1f2328;--ink2:#5b6470;--line:#e3e6ea;--ok:#2e7d32;--warn:#b26a00;--bad:#c62828;--info:#0277bd;--demo:#16181F;--amber:#F2B93B}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Roboto,Inter,"PingFang SC","Helvetica Neue",Arial,sans-serif}
+button{font:inherit;cursor:pointer}
+code{font:12px "JetBrains Mono","SF Mono",Menlo,monospace;background:#eef0f3;padding:1px 5px;border-radius:3px}
+/* prototype ribbon */
+.ribbon{background:var(--demo);color:#E8E6DF;padding:7px 16px;display:flex;gap:14px;align-items:center;font-size:13px;position:sticky;top:0;z-index:40}
+.ribbon b{color:var(--amber);letter-spacing:.06em}
+.ribbon a{color:#9CC4FF}
+.ribbon .sp{flex:1}
+.ribbon button{background:#2A2D36;color:#E8E6DF;border:1px solid #454955;border-radius:4px;padding:2px 10px}
+/* layout */
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:calc(100vh - 36px)}
+.app{display:flex;flex-direction:column;min-width:0}
+.appbar{background:var(--blue);color:#fff;height:56px;display:flex;align-items:center;padding:0 20px;gap:14px;box-shadow:0 2px 4px rgba(0,0,0,.2)}
+.appbar .t{font-size:18px;font-weight:500;flex:1}
+.who{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.14);border-radius:20px;padding:4px 6px 4px 12px;font-size:13px}
+.who select{background:#fff;border:0;border-radius:14px;padding:3px 8px;font:inherit}
+.body{display:flex;flex:1;min-height:0}
+.side{width:200px;background:#fff;border-right:1px solid var(--line);padding:10px 0;flex-shrink:0}
+.side div{padding:10px 20px;color:var(--ink2)}
+.side div.on{background:#e8f1fc;color:var(--blue);font-weight:500}
+.main{flex:1;padding:22px 26px;min-width:0}
+h1{font-size:24px;font-weight:500;margin:0 0 12px}
+.tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tabs span{padding:9px 18px;color:var(--ink2);text-transform:uppercase;font-size:13px;letter-spacing:.03em}
+.tabs span.on{color:var(--blue);border-bottom:2px solid var(--blue);font-weight:500}
+.paper{background:var(--paper);border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.12);padding:14px 16px;margin-bottom:14px;position:relative}
+.paper h3{margin:0 0 8px;font-size:13px;color:var(--ink2);font-weight:500;text-transform:uppercase;letter-spacing:.05em}
+.ref{position:absolute;right:12px;top:10px;font-size:11px;color:var(--ink2);text-decoration:none;border:1px dashed #b9c0c9;border-radius:10px;padding:0 8px}
+.ref:hover{color:var(--blue);border-color:var(--blue)}
+.strip{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;border-radius:14px;padding:2px 10px;font-size:12.5px;background:#eef0f3;color:var(--ink);white-space:nowrap}
+.chip.ok{background:#e6f4ea;color:var(--ok)}.chip.warn{background:#fff3dc;color:var(--warn)}.chip.bad{background:#fde7e7;color:var(--bad)}.chip.info{background:#e3f2fd;color:var(--info)}
+.alert{border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:13px}
+.alert.bad{background:#fde7e7;color:#8e1b1b}.alert.warn{background:#fff3dc;color:#7a4a00}
+.kv{display:flex;gap:22px;flex-wrap:wrap;font-size:13px}.kv b{display:block;font-weight:500;color:var(--ink2);font-size:11.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:500;color:var(--ink2);padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #f0f1f3;white-space:nowrap}
+tr.row{cursor:pointer}tr.row:hover td{background:#f7f9fc}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.bar2{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.bar2 select{font:inherit;padding:5px 8px;border:1px solid #c9ced6;border-radius:4px;background:#fff}
+.btn{border:0;border-radius:4px;padding:6px 14px;background:var(--blue);color:#fff;text-transform:uppercase;font-size:13px;font-weight:500;letter-spacing:.02em;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.btn:hover{background:var(--blue-d)}
+.btn.text{background:none;color:var(--blue);box-shadow:none}.btn.text:hover{background:#e8f1fc}
+.btn.err{background:var(--bad)}.btn.errt{background:none;color:var(--bad);box-shadow:none}
+.btn[disabled]{background:#dfe2e6;color:#9aa1ab;box-shadow:none;cursor:not-allowed}
+.hint{font-size:12px;color:var(--ink2)}
+/* dialog */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:60px 20px;overflow:auto}
+.mask.open{display:flex}
+.dlg{background:#fff;border-radius:6px;width:640px;max-width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.dlg h2{margin:0;padding:16px 22px 6px;font-size:19px;font-weight:500}
+.dlg .c{padding:8px 22px 6px}
+.dlg .a{padding:10px 14px 14px;display:flex;justify-content:flex-end;gap:8px}
+.f{margin:10px 0}.f label{display:block;font-size:12px;color:var(--ink2);margin-bottom:3px}
+.f input,.f select,.f textarea{width:100%;font:inherit;padding:8px 10px;border:1px solid #c9ced6;border-radius:4px}
+.f .e{color:var(--bad);font-size:12px;margin-top:2px}
+.ro{background:#f6f7f9;border-radius:4px;padding:8px 10px;font-size:12.5px;color:var(--ink2)}
+.leg{border:1px solid var(--line);border-radius:4px;padding:8px 10px;margin:6px 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px}
+.tl{list-style:none;margin:6px 0 0;padding:0;font-size:12.5px;max-height:150px;overflow:auto}
+.tl li{padding:3px 0 3px 14px;border-left:2px solid var(--line);color:var(--ink2)}
+.tl li b{color:var(--ink);font-weight:500}
+.sec-t{font-size:11.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;margin:12px 0 2px}
+/* demo panel */
+.demo{background:#1d2028;color:#D9D7D0;padding:16px 16px 30px;font-size:13px;overflow:auto;border-left:3px solid var(--amber)}
+.demo h4{margin:0 0 4px;color:var(--amber);font-size:12px;letter-spacing:.08em}
+.demo p{margin:0 0 10px;color:#A9ABB2}
+.steps{list-style:none;margin:0 0 16px;padding:0;counter-reset:s}
+.steps li{counter-increment:s;padding:7px 8px 7px 34px;position:relative;border-radius:4px;color:#A9ABB2}
+.steps li::before{content:counter(s);position:absolute;left:8px;top:7px;width:18px;height:18px;border-radius:50%;border:1px solid #585c68;font-size:11px;text-align:center;line-height:17px}
+.steps li.cur{background:#2c303a;color:#fff}.steps li.cur::before{border-color:var(--amber);color:var(--amber)}
+.steps li.done{color:#6f7480;text-decoration:line-through}.steps li.done::before{content:"✓";background:#2e7d32;border-color:#2e7d32;color:#fff}
+.steps a{color:#9CC4FF;font-size:11.5px;margin-left:4px;text-decoration:none}
+.demo label{display:flex;gap:8px;align-items:center;padding:4px 0;cursor:pointer}
+.demo select,.demo button.d{width:100%;font:inherit;background:#2A2D36;color:#E8E6DF;border:1px solid #454955;border-radius:4px;padding:6px 8px;margin:3px 0 8px}
+.demo button.d:hover{border-color:var(--amber)}
+.demo hr{border:0;border-top:1px solid #343844;margin:12px 0}
+.pulse{outline:3px solid var(--amber);outline-offset:3px;animation:pu 1.2s ease-in-out infinite;border-radius:4px}
+@keyframes pu{50%{outline-color:transparent}}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#323232;color:#fff;padding:9px 18px;border-radius:4px;font-size:13px;z-index:60;display:none;max-width:80vw}
+@media(max-width:1100px){.wrap{grid-template-columns:1fr}.demo{border-left:0;border-top:3px solid var(--amber)}.side{display:none}}
+</style>
+</head>
+<body>
+<div class="ribbon">
+  <b>INTERACTIVE MOCKUP</b>
+  <span data-i="ribbon">No real funds and no backend. Data resets on reload. Timings are compressed: seconds here stand for minutes in production.</span>
+  <span class="sp"></span>
+  <a id="specLink" href="binance-treasury-admin-interaction.en.html" data-i="spec">Open the written spec</a>
+  <button id="langBtn">中文</button>
+</div>
+<div class="wrap">
+ <div class="app">
+  <div class="appbar"><div class="t">Neodax Admin Dashboard</div>
+   <div class="who" id="whoBox"><span data-i="acting">Acting as</span>
+    <select id="who"><option>alice</option><option>bob</option><option>carol</option></select></div>
+  </div>
+  <div class="body">
+   <div class="side"><div>Dashboard</div><div>System Setting</div><div>Account Manage</div><div>Spot Manage</div><div>Commercial Controls</div><div>Platform Users</div><div>Deposits &amp; Withdrawals</div><div class="on">Platform Finance</div></div>
+   <div class="main">
+    <h1>Platform Finance</h1>
+    <div class="tabs"><span>Spot Credit</span><span class="on">Binance Treasury</span></div>
+    <div id="alerts"></div>
+    <div class="paper"><a class="ref" data-sec="health" href="#">spec §09</a><h3>Health</h3><div class="strip" id="health"></div></div>
+    <div class="paper"><a class="ref" data-sec="page" href="#">spec §03</a><h3>Profile</h3><div class="kv" id="profile"></div></div>
+    <div class="paper"><a class="ref" data-sec="health" href="#">spec §09</a><h3>Assets</h3><div style="overflow:auto"><table id="assets"></table></div></div>
+    <div class="paper"><a class="ref" data-sec="states" href="#">spec §04</a><h3>Operations</h3>
+     <div class="bar2">
+      <select id="fType"><option value="">All types</option><option value="fund">Funding</option><option value="sweep">Sweep</option></select>
+      <select id="fState"><option value="">All states</option></select>
+      <span style="flex:1"></span>
+      <span class="hint" id="propHint"></span>
+      <button class="btn" id="bFund">Propose funding</button>
+      <button class="btn" id="bSweep">Propose sweep</button>
+     </div>
+     <div style="overflow:auto"><table id="ops"></table></div>
+    </div>
+   </div>
+  </div>
+ </div>
+
+ <aside class="demo">
+  <h4 data-i="gT">GUIDED WALKTHROUGH</h4>
+  <p data-i="gP">Follow the steps. The element to click is outlined in yellow.</p>
+  <ol class="steps" id="steps"></ol>
+  <hr>
+  <h4 data-i="sT">SCENARIO FOR THE NEXT APPROVAL</h4>
+  <p data-i="sP">Decides what happens after the next operation is approved.</p>
+  <select id="scn"></select>
+  <button class="d" id="bMine" style="display:none"></button>
+  <hr>
+  <h4 data-i="eT">ENVIRONMENT SWITCHES</h4>
+  <label><input type="checkbox" id="xExec"><span data-i="xExec">Cage execution disabled</span></label>
+  <label><input type="checkbox" id="xGas"><span data-i="xGas">Transit address gas is low</span></label>
+  <label><input type="checkbox" id="xHalt"><span data-i="xHalt">Evidence ingestion halted</span></label>
+  <hr>
+  <button class="d" id="bExpire"></button>
+  <button class="d" id="bReset"></button>
+ </aside>
+</div>
+
+<div class="mask" id="mask"><div class="dlg" id="dlg"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+var L='en';
+var T={
+ en:{ribbon:'No real funds and no backend. Data resets on reload. Timings are compressed: seconds here stand for minutes in production.',spec:'Open the written spec',acting:'Acting as',
+  gT:'GUIDED WALKTHROUGH',gP:'Follow the steps. The element to click is outlined in yellow.',sT:'SCENARIO FOR THE NEXT APPROVAL',sP:'Decides what happens after the next operation is approved.',eT:'ENVIRONMENT SWITCHES',
+  xExec:'Cage execution disabled',xGas:'Transit address gas is low',xHalt:'Evidence ingestion halted',
+  expire:'Fast-forward 24 hours (expire pending proposals)',reset:'Reset all data',mine:'Stuck transaction gets mined now',
+  scn:{normal:'Normal: completes',refuse:'Cage refuses: daily limit lost a race',stall1:'Stalls before leg 1 is sent (breaker open)',stall2:'Stalls after leg 2 is sent (stuck transaction)'},
+  steps:['As <b>alice</b>, click <b>Propose funding</b>','Fill in amount and reason, then submit','Open the new operation. Alice can only <b>Cancel</b>, not approve','Switch <b>Acting as</b> to <b>bob</b>','Open the operation and click <b>Approve</b>','Watch both legs reach FINAL and the state become completed','Pick the scenario "Stalls before leg 1", propose and approve again, then <b>Abandon</b>','Propose a <b>sweep</b> for funds at the transit address'],
+  sec:'spec'},
+ zh:{ribbon:'没有真实资金，也不连后端。刷新页面数据会重置。时间做了压缩：这里的几秒相当于生产上的几分钟。',spec:'打开文字版方案',acting:'当前操作人',
+  gT:'操作引导',gP:'按步骤操作。要点击的位置会有黄色边框。',sT:'下一次审批后的场景',sP:'决定下一笔操作审批通过后会发生什么。',eT:'环境开关',
+  xExec:'Cage 执行被禁用',xGas:'中转地址 Gas 不足',xHalt:'证据读取已停止',
+  expire:'快进 24 小时（让待审批的提案过期）',reset:'重置全部数据',mine:'让卡住的交易现在被打包',
+  scn:{normal:'正常：执行完成',refuse:'Cage 拒绝：每日限额被别的审批占用',stall1:'第 1 段发出前卡住（熔断器打开）',stall2:'第 2 段发出后卡住（交易迟迟不打包）'},
+  steps:['以 <b>alice</b> 身份点击 <b>Propose funding</b>','填写金额和原因，然后提交','打开新建的操作。alice 只能 <b>Cancel</b>，不能审批','把<b>当前操作人</b>切换成 <b>bob</b>','打开这笔操作，点击 <b>Approve</b>','观察两段都变成 FINAL，状态变成 completed','选择场景"第 1 段发出前卡住"，再提案并审批一次，然后点 <b>Abandon</b>','对中转地址上的资金提案一次<b>扫回</b>'],
+  sec:'方案'}
+};
+var SEC={propose:'05',decide:'06',track:'07',stalled:'08',health:'09',page:'03',states:'04'};
+function specUrl(sec){return 'binance-treasury-admin-interaction'+(L==='en'?'.en':'')+'.html'+(sec?'#'+sec:'')}
+var $=function(id){return document.getElementById(id)};
+function fmt(n){return Number(n).toLocaleString('en-US')}
+function now(){return new Date().toISOString().slice(11,19)+' UTC'}
+function tx(){var s='0x';for(var i=0;i<8;i++)s+=Math.floor(Math.random()*16).toString(16);return s+'…'}
+
+var S, timers=[], seq=0, cur=null, guide;
+function init(){
+ timers.forEach(clearTimeout);timers=[];seq=0;cur=null;
+ S={user:'alice',exec:true,gasLow:false,halt:false,scn:'normal',
+  assets:{USDT:{min:1000,max:500000,limF:1000000,limS:1000000,usedF:120000,usedS:0,transit:40000,inTransit:0,out:860000,ret:90000},
+          USDC:{min:1000,max:250000,limF:500000,limS:500000,usedF:0,usedS:0,transit:0,inTransit:0,out:200000,ret:0}},
+  ops:[]};
+ guide=[0,0,0,0,0,0,0,0];
+ seed('fund','USDT',120000,'completed','carol','bob','Weekly hedge margin top-up',{cage:'COMPLETED',legs:[['CUSTODY_TO_EOA','FINAL'],['EOA_TO_BINANCE','FINAL']]});
+ seed('sweep','USDT',25000,'rejected','bob','carol','Return idle balance',{note:'Rejected by carol: amount should be the full idle balance'});
+ $('who').value='alice';$('scn').value='normal';$('xExec').checked=$('xGas').checked=$('xHalt').checked=false;
+ render();
+}
+function seed(type,asset,amount,state,proposer,approver,reason,x){
+ var o=mk(type,asset,amount,reason,'',proposer);o.state=state;o.approver=approver;
+ if(x.cage){o.cage=x.cage;o.legs=x.legs.map(function(l){return {leg:l[0],state:l[1],tx:tx(),conf:12,attempts:1,reverts:0,sent:true}})}
+ o.tl.push({t:'earlier',x:x.note||('State: '+state)});
+}
+function mk(type,asset,amount,reason,risk,proposer){
+ var o={id:(++seq).toString(16).padStart(2,'0')+Math.random().toString(16).slice(2,8),type:type,asset:asset,amount:amount,reason:reason,risk:risk,state:'approval_pending',proposer:proposer,approver:'',created:now(),cage:'',legs:[],err:null,tl:[],atTransit:false,scn:'normal',attempts:0};
+ o.tl.push({t:o.created,x:'Proposed by '+proposer});S.ops.unshift(o);return o;
+}
+function later(ms,fn){timers.push(setTimeout(function(){fn();render()},ms))}
+function ev(o,x){o.tl.push({t:now(),x:x})}
+function toast(m){var t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.h);toast.h=setTimeout(function(){t.style.display='none'},3200)}
+function sweepable(a){var p=S.ops.filter(function(o){return o.type==='sweep'&&o.asset===a&&['approved','executing','manual_review'].indexOf(o.state)>=0}).reduce(function(s,o){return s+o.amount},0);return Math.max(0,S.assets[a].transit-S.assets[a].inTransit-p)}
+
+/* ---------- engine ---------- */
+function approve(o){
+ var A=S.assets[o.asset],used=o.type==='fund'?A.usedF:A.usedS,lim=o.type==='fund'?A.limF:A.limS;
+ if(o.proposer===S.user)return 'operation proposer cannot approve';
+ if(o.state!=='approval_pending')return 'operation is not awaiting approval';
+ if(!S.exec)return 'Cage Binance treasury execution is disabled';
+ if(used+o.amount>lim)return 'approving would exceed the Cage daily limit for this asset: '+fmt(used)+' already approved today, limit '+fmt(lim);
+ o.state='approved';o.approver=S.user;o.scn=S.scn;ev(o,'Approved by '+S.user);
+ later(2000,function(){dispatch(o)});return '';
+}
+function dispatch(o){
+ var A=S.assets[o.asset];o.attempts=1;
+ if(o.scn==='refuse'){o.state='failed_terminal';o.err={c:'DAILY_LIMIT_EXCEEDED',m:'the '+(o.type==='fund'?'funding':'sweep')+' daily limit for '+o.asset+' would be exceeded'};ev(o,'Cage refused: DAILY_LIMIT_EXCEEDED');return}
+ o.state='executing';o.cage='ACCEPTED';ev(o,'OPERATION_ACCEPTED');
+ if(o.type==='fund'){A.usedF+=o.amount;o.legs=[L0('CUSTODY_TO_EOA'),L0('EOA_TO_BINANCE')]}
+ else{A.usedS+=o.amount;o.legs=[L0('EOA_TO_CUSTODY')]}
+ later(1500,function(){o.type==='fund'?leg1(o):sweepLeg(o)});
+}
+function L0(n){return {leg:n,state:'PENDING',tx:'',conf:0,attempts:0,reverts:0,sent:false}}
+function send(l){l.state='SUBMITTED';l.tx=tx();l.attempts=1;l.sent=true}
+function leg1(o){
+ var l=o.legs[0],A=S.assets[o.asset];o.cage='LEG1_IN_PROGRESS';
+ if(o.scn==='stall1'){o.err={c:'WITHDRAWAL_BREAKER_OPEN',m:'the custody withdrawal breaker is open'};ev(o,'LEG_FAILED_RETRYABLE · WITHDRAWAL_BREAKER_OPEN');
+  later(3500,function(){if(o.state!=='executing')return;o.state='manual_review';o.cage='STALLED';ev(o,'OPERATION_STALLED · leg never sent')});return}
+ send(l);ev(o,'LEG_SUBMITTED · CUSTODY_TO_EOA');
+ later(2000,function(){l.state='INCLUDED';l.conf=3});
+ later(4000,function(){l.state='FINAL';l.conf=12;o.atTransit=true;A.transit+=o.amount;A.inTransit+=o.amount;ev(o,'LEG_FINAL · CUSTODY_TO_EOA');o.cage='LEG2_IN_PROGRESS';later(1200,function(){leg2(o)})});
+}
+function leg2(o){
+ var l=o.legs[1];send(l);ev(o,'LEG_SUBMITTED · EOA_TO_BINANCE');
+ if(o.scn==='stall2'){later(2500,function(){l.attempts=6;o.err={c:'STUCK_MAX_FEE_BUMPS',m:'transaction is still unmined after the maximum number of fee bumps'};ev(o,'LEG_FAILED_RETRYABLE · STUCK_MAX_FEE_BUMPS')});
+  later(5500,function(){if(o.state!=='executing')return;o.state='manual_review';o.cage='STALLED';ev(o,'OPERATION_STALLED · transaction already sent')});return}
+ finish2(o,2000);
+}
+function finish2(o,d){
+ var l=o.legs[1],A=S.assets[o.asset];
+ later(d,function(){l.state='INCLUDED';l.conf=3;o.err=null;if(o.state==='manual_review'){o.state='executing';o.cage='LEG2_IN_PROGRESS';ev(o,'Leg made progress, back to executing')}});
+ later(d+2000,function(){l.state='FINAL';l.conf=12;o.atTransit=false;A.transit-=o.amount;A.inTransit-=o.amount;A.out+=o.amount;ev(o,'LEG_FINAL · EOA_TO_BINANCE');o.state='completed';o.cage='COMPLETED';ev(o,'OPERATION_COMPLETED');mark(5)});
+}
+function sweepLeg(o){
+ var l=o.legs[0],A=S.assets[o.asset];o.cage='SWEEP_IN_PROGRESS';send(l);ev(o,'LEG_SUBMITTED · EOA_TO_CUSTODY');
+ later(2000,function(){l.state='INCLUDED';l.conf=3});
+ later(4000,function(){l.state='FINAL';l.conf=12;A.transit-=o.amount;A.ret+=o.amount;ev(o,'LEG_FINAL · EOA_TO_CUSTODY');o.state='completed';o.cage='COMPLETED';ev(o,'OPERATION_COMPLETED')});
+}
+function abandon(o,reason){
+ if(!reason.trim())return 'decision reason is required';
+ var l=o.legs.filter(function(x){return x.state!=='FINAL'})[0];
+ if(l&&l.sent)return 'LEG_BROADCAST: the current leg was already signed or broadcast and must reach finality';
+ var A=S.assets[o.asset];if(l)l.state='ABANDONED';
+ if(!o.legs.some(function(x){return x.state==='FINAL'})){if(o.type==='fund')A.usedF-=o.amount;else A.usedS-=o.amount}
+ o.state='failed_terminal';o.cage='ABANDONED';o.err={c:'ABANDONED',m:'abandoned by '+S.user+': '+reason};ev(o,'OPERATION_ABANDONED by '+S.user);mark(6);return '';
+}
+
+/* ---------- render ---------- */
+var SC={approval_pending:'info',approved:'info',executing:'info',completed:'ok',failed_retryable:'warn',manual_review:'warn',failed_terminal:'bad',rejected:'',cancelled:'',expired:''};
+function chip(s,c){return '<span class="chip '+(c||'')+'">'+s+'</span>'}
+function render(){
+ var a='';
+ if(!S.exec)a+='<div class="alert bad">Cage Binance treasury execution is disabled. Proposals and approvals are refused.</div>';
+ if(S.halt)a+='<div class="alert bad">Evidence ingestion is halted (reason: evidence_drift, event 7c1e…). States below may be out of date until engineering resolves it.</div>';
+ if(S.gasLow)a+='<div class="alert warn">Transit address gas is LOW. Transfers from the transit address may not go out.</div>';
+ $('alerts').innerHTML=a;
+ $('health').innerHTML=chip('Execution: '+(S.exec?'ON':'OFF'),S.exec?'ok':'bad')+chip('Gas: '+(S.gasLow?'LOW':'OK'),S.gasLow?'warn':'ok')+chip('Balances: fresh','ok')+chip('Evidence lag: '+(S.halt?'14':'0'),S.halt?'bad':'ok');
+ $('profile').innerHTML='<div><b>Profile</b>binance-main</div><div><b>Network</b>Ethereum</div><div><b>Transit address</b>0x71c3…a9f2</div><div><b>Custody address</b>0x2b6e…04d1</div><div><b>Finality</b>12 confirmations</div>';
+ var h='<tr><th>Asset</th><th class="num">Min / max per transfer</th><th class="num">Funding used / daily limit</th><th class="num">Sweep used / daily limit</th><th class="num">At transit address</th><th class="num">In transit</th><th class="num">Sweepable</th><th class="num">Net to Binance</th></tr>';
+ Object.keys(S.assets).forEach(function(k){var A=S.assets[k];h+='<tr><td><b>'+k+'</b></td><td class="num">'+fmt(A.min)+' / '+fmt(A.max)+'</td><td class="num">'+fmt(A.usedF)+' / '+fmt(A.limF)+'</td><td class="num">'+fmt(A.usedS)+' / '+fmt(A.limS)+'</td><td class="num">'+fmt(A.transit)+'</td><td class="num">'+fmt(A.inTransit)+'</td><td class="num">'+fmt(sweepable(k))+'</td><td class="num">'+fmt(A.out-A.ret)+'</td></tr>'});
+ $('assets').innerHTML=h;
+ var ft=$('fType').value,fs=$('fState').value;
+ var o='<tr><th>Created</th><th>Type</th><th>Asset</th><th class="num">Amount</th><th>State</th><th>Proposer</th><th>Approver</th><th>Cage state</th><th>Last error</th></tr>';
+ S.ops.filter(function(x){return(!ft||x.type===ft)&&(!fs||x.state===fs)}).forEach(function(x){o+='<tr class="row" data-id="'+x.id+'"><td>'+x.created+'</td><td>'+(x.type==='fund'?'Funding':'Sweep')+'</td><td>'+x.asset+'</td><td class="num">'+fmt(x.amount)+'</td><td>'+chip(x.state,SC[x.state])+'</td><td>'+x.proposer+'</td><td>'+(x.approver||'—')+'</td><td>'+(x.cage||'—')+'</td><td>'+(x.err?x.err.c:'—')+'</td></tr>'});
+ $('ops').innerHTML=o;
+ [].forEach.call(document.querySelectorAll('tr.row'),function(r){r.onclick=function(){openOp(r.dataset.id)}});
+ $('bFund').disabled=$('bSweep').disabled=!S.exec;$('propHint').textContent=S.exec?'':'Disabled: Cage execution is off';
+ var st=S.ops.filter(function(x){return x.state==='manual_review'&&x.legs[1]&&x.legs[1].sent&&x.legs[1].state==='SUBMITTED'})[0];
+ $('bMine').style.display=st?'block':'none';
+ if(cur&&$('mask').classList.contains('open')&&cur.kind==='op')drawOp(cur.o,true);
+ drawGuide();
+}
+function open(html){$('dlg').innerHTML=html;$('mask').classList.add('open')}
+function close(){$('mask').classList.remove('open');cur=null;render()}
+$('mask').onclick=function(e){if(e.target===$('mask'))close()};
+function ref(sec){return '<a class="ref" style="position:static;float:right;margin-top:4px" href="'+specUrl(sec)+'" target="_blank">'+T[L].sec+' §'+SEC[sec]+'</a>'}
+
+function openProp(type,pre){
+ cur={kind:'prop'};var opts=Object.keys(S.assets).map(function(k){return '<option>'+k+'</option>'}).join('');
+ open('<h2>'+ref('propose')+(type==='fund'?'Propose funding (custody → Binance)':'Propose sweep (transit address → custody)')+'</h2><div class="c">'+
+  '<div class="f"><label>Asset</label><select id="pA">'+opts+'</select></div>'+
+  '<div class="f"><label>Amount</label><input id="pM" inputmode="decimal" placeholder="e.g. 250000"><div class="hint" id="pH"></div><div class="e" id="pE"></div></div>'+
+  '<div class="f"><label>Reason (required)</label><input id="pR" placeholder="Why this transfer is needed"></div>'+
+  '<div class="f"><label>Risk context (optional, shown to the approver)</label><input id="pK"></div>'+
+  '<div class="ro" id="pRO"></div></div>'+
+  '<div class="a"><button class="btn text" id="pC">Cancel</button><button class="btn" id="pS">Submit proposal</button></div>');
+ function hint(){var k=$('pA').value,A=S.assets[k];$('pH').textContent='min '+fmt(A.min)+' · max '+fmt(A.max)+(type==='fund'?' · left today '+fmt(A.limF-A.usedF):' · sweepable '+fmt(sweepable(k)));
+  $('pRO').innerHTML=type==='fund'?'To: Binance deposit address 0x9f04…77be · Network: Ethereum · Profile: binance-main<br>These are fixed by the Cage profile and cannot be edited.':'From: transit address 0x71c3…a9f2 · To: custody 0x2b6e…04d1 · Profile: binance-main<br>These are fixed by the Cage profile and cannot be edited.'}
+ $('pA').onchange=hint;if(pre){$('pA').value=pre.asset;$('pM').value=pre.amount;$('pR').value=pre.reason}hint();
+ $('pC').onclick=close;
+ $('pS').onclick=function(){var k=$('pA').value,A=S.assets[k],m=Number($('pM').value),r=$('pR').value.trim(),e='';
+  if(!S.exec)e='Cage Binance treasury execution is disabled';
+  else if(!(m>0)||!r)e='invalid Binance treasury request: asset, a positive amount and a reason are required';
+  else if(m<A.min||m>A.max)e='invalid Binance treasury request: amount must be between '+A.min+' and '+A.max;
+  else if(type==='sweep'&&m>sweepable(k))e='invalid Binance treasury request: amount exceeds the sweepable transit EOA balance '+sweepable(k);
+  if(e){$('pE').textContent=e;return}
+  var o=mk(type,k,m,r,$('pK').value.trim(),S.user);mark(1);if(type==='sweep')mark(7);close();toast('Proposal created. It needs approval from another person within 24 hours.');guide.last=o.id;render()};
+ mark(0);
+}
+function openOp(id){var o=S.ops.filter(function(x){return x.id===id})[0];if(!o)return;cur={kind:'op',o:o};drawOp(o);if(o.state==='approval_pending'&&o.proposer===S.user)mark(2)}
+function drawOp(o,keep){
+ var keepR=keep&&$('dR')?$('dR').value:'',keepE=keep&&$('dE')?$('dE').textContent:'';
+ var mine=o.proposer===S.user,h='<h2>'+ref(o.state==='manual_review'?'stalled':o.state==='approval_pending'?'decide':'track')+'Operation '+o.id+' · '+(o.type==='fund'?'Funding':'Sweep')+' · '+o.asset+' '+fmt(o.amount)+'</h2><div class="c">';
+ h+='<div class="strip">'+chip(o.state,SC[o.state])+(o.cage?chip('Cage: '+o.cage):'')+(o.type==='fund'&&o.cage?chip('Funds at transit address: '+(o.atTransit?'yes':'no'),o.atTransit?'warn':''):'')+'</div>';
+ h+='<div class="sec-t">People</div><div>Proposer <b>'+o.proposer+'</b> · Approver <b>'+(o.approver||'pending')+'</b></div>';
+ h+='<div class="sec-t">Reason</div><div>'+o.reason+(o.risk?'<br><span class="hint">Risk context: '+o.risk+'</span>':'')+'</div>';
+ if(o.err)h+='<div class="sec-t">Last error</div><div class="alert '+(o.state==='failed_terminal'?'bad':'warn')+'" style="margin:2px 0"><b>'+o.err.c+'</b> · '+o.err.m+'</div>';
+ if(o.state==='failed_retryable')h+='<div class="hint">Dispatch attempts: '+o.attempts+' · retries automatically</div>';
+ if(o.legs.length){h+='<div class="sec-t">Legs</div>';o.legs.forEach(function(l,i){h+='<div class="leg"><b>'+(i+1)+'. '+l.leg+'</b>'+chip(l.state,l.state==='FINAL'?'ok':l.state==='PENDING'?'':l.state==='ABANDONED'?'bad':'info')+(l.tx?'<code>tx '+l.tx+'</code>':'<span class="hint">not sent yet</span>')+(l.conf?'<span>'+l.conf+' confirmations</span>':'')+(l.attempts>1?'<span>fee bumps '+(l.attempts-1)+'</span>':'')+'</div>'})}
+ h+='<div class="sec-t">Timeline</div><ul class="tl">'+o.tl.map(function(t){return '<li><b>'+t.t+'</b> · '+t.x+'</li>'}).join('')+'</ul>';
+ var acts='<button class="btn text" id="dX">Close</button>';
+ if(o.state==='approval_pending'){
+  if(mine){h+='<div class="alert warn" style="margin-top:10px">You proposed this operation. Another person must approve or reject it. You can cancel it.</div>';acts+='<button class="btn errt" id="dCancel">Cancel proposal</button>'}
+  else{h+='<div class="f"><label>Decision reason (required to reject, optional to approve)</label><input id="dR"><div class="e" id="dE"></div></div>';acts+='<button class="btn errt" id="dRej">Reject</button><button class="btn" id="dApp">Approve</button>'}
+ }
+ if(o.state==='manual_review'){h+='<div class="f"><label>Reason (required to abandon)</label><input id="dR"><div class="e" id="dE"></div></div>';acts+='<button class="btn err" id="dAb">Abandon</button>'}
+ if(o.state==='failed_terminal'&&o.atTransit){h+='<div class="alert warn" style="margin-top:10px">'+fmt(o.amount)+' '+o.asset+' is still at the transit address. Recovering it is a normal sweep with a second approver.</div>';acts+='<button class="btn" id="dSw">Propose sweep</button>'}
+ open(h+'</div><div class="a">'+acts+'</div>');
+ if($('dR')){$('dR').value=keepR;$('dE').textContent=keepE}
+ $('dX').onclick=close;
+ function err(m){$('dE').textContent=m}
+ if($('dCancel'))$('dCancel').onclick=function(){o.state='cancelled';ev(o,'Cancelled by '+S.user);close();toast('Proposal cancelled.')};
+ if($('dApp'))$('dApp').onclick=function(){var e=approve(o);if(e){err(e);return}mark(4);toast('Approved. It is sent to Cage within about 2 seconds.');render()};
+ if($('dRej'))$('dRej').onclick=function(){var r=$('dR').value.trim();if(!r){err('decision reason is required');return}o.state='rejected';o.approver=S.user;ev(o,'Rejected by '+S.user+': '+r);close();toast('Proposal rejected.')};
+ if($('dAb'))$('dAb').onclick=function(){var e=abandon(o,$('dR').value);if(e){err(e);return}toast('Operation abandoned.');render()};
+ if($('dSw'))$('dSw').onclick=function(){openProp('sweep',{asset:o.asset,amount:o.amount,reason:'Recover funds left by operation '+o.id})};
+}
+
+/* ---------- guide ---------- */
+function mark(i){if(!guide[i]){guide[i]=1}}
+function drawGuide(){
+ var c=guide.indexOf(0);
+ $('steps').innerHTML=T[L].steps.map(function(s,i){return '<li class="'+(guide[i]?'done':i===c?'cur':'')+'">'+s+'</li>'}).join('');
+ [].forEach.call(document.querySelectorAll('.pulse'),function(e){e.classList.remove('pulse')});
+ if($('mask').classList.contains('open'))return;
+ var t=null,first=document.querySelector('tr.row');
+ if(c===0)t=$('bFund');else if(c===2||c===4)t=first;else if(c===3)t=$('whoBox');else if(c===6)t=$('scn');else if(c===7)t=$('bSweep');
+ if(c===0&&S.user!=='alice')t=$('whoBox');
+ if(t)t.classList.add('pulse');
+}
+function i18n(){
+ [].forEach.call(document.querySelectorAll('[data-i]'),function(e){e.textContent=T[L][e.dataset.i]});
+ $('langBtn').textContent=L==='en'?'中文':'English';$('specLink').href=specUrl('');
+ [].forEach.call(document.querySelectorAll('a.ref[data-sec]'),function(a){a.href=specUrl(a.dataset.sec);a.target='_blank';a.textContent=T[L].sec+' §'+SEC[a.dataset.sec]});
+ var v=$('scn').value||'normal';$('scn').innerHTML=Object.keys(T[L].scn).map(function(k){return '<option value="'+k+'">'+T[L].scn[k]+'</option>'}).join('');$('scn').value=v;
+ $('bExpire').textContent=T[L].expire;$('bReset').textContent=T[L].reset;$('bMine').textContent=T[L].mine;
+ document.documentElement.lang=L==='en'?'en':'zh-CN';
+}
+
+/* ---------- wiring ---------- */
+$('fState').innerHTML+=Object.keys(SC).map(function(s){return '<option>'+s+'</option>'}).join('');
+$('fType').onchange=$('fState').onchange=render;
+$('who').onchange=function(){S.user=this.value;if(S.user!=='alice')mark(3);render()};
+$('bFund').onclick=function(){openProp('fund')};$('bSweep').onclick=function(){openProp('sweep')};
+$('scn').onchange=function(){S.scn=this.value;render()};
+$('xExec').onchange=function(){S.exec=!this.checked;render()};
+$('xGas').onchange=function(){S.gasLow=this.checked;render()};
+$('xHalt').onchange=function(){S.halt=this.checked;render()};
+$('bExpire').onclick=function(){var n=0;S.ops.forEach(function(o){if(o.state==='approval_pending'){o.state='expired';ev(o,'Expired after 24 hours');n++}});render();toast(n+' pending proposal(s) expired.')};
+$('bReset').onclick=function(){init();toast('Data reset.')};
+$('bMine').onclick=function(){var o=S.ops.filter(function(x){return x.state==='manual_review'&&x.legs[1]&&x.legs[1].sent})[0];if(o){finish2(o,600)}};
+$('langBtn').onclick=function(){L=L==='en'?'zh':'en';i18n();render()};
+if(/[?&#]lang=zh/.test(location.href))L='zh';
+i18n();init();
+})();
+</script>
+</body>
+</html>

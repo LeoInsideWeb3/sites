@@ -134,6 +134,14 @@ ol.seq span{display:block;font-size:14px}
 .wf .bt{border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 12px;font:600 12px/1.9 var(--sans);background:#fff}
 .wf .bt.d{border-color:var(--del-b);color:var(--del-b)}
 .wf .lb2{min-width:128px;color:var(--ink3);font-size:12.5px}
+
+.cta{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:22px 0 6px;padding:16px 20px;border:2px solid var(--ink);border-radius:6px;background:var(--amber-bg)}
+.cta .tx{flex:1;min-width:260px;color:var(--ink)}
+.cta .tx b{display:block;font:600 12px var(--sans);letter-spacing:.1em;color:var(--amber);margin-bottom:2px}
+.cta a.go{background:var(--accent);color:#fff;padding:9px 20px;border-radius:4px;text-decoration:none;font-weight:600;white-space:nowrap}
+.bar a.go{background:var(--accent);color:#fff;padding:4px 14px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600}
+.mn.try{border-left-color:var(--accent);background:linear-gradient(90deg,var(--amber-bg),transparent)}
+.mn.try b.lb{color:var(--accent)}
 </style>
 </head>
 <body class="show-changes">
@@ -142,6 +150,7 @@ ol.seq span{display:block;font-size:14px}
   <div class="logo">Yellow<i style="font-style:normal">.</i></div>
   <div class="crumb">Admin console · Binance treasury transfers</div>
   <div class="sp"></div>
+  <a class="go" href="binance-treasury-admin-mockup.html" target="_blank">Interactive mockup ▸</a>
   <span class="pill">v1 · for confirmation</span>
   <a class="lang" href="binance-treasury-admin-interaction.html">中文</a>
 </div></div>
@@ -158,6 +167,7 @@ ol.seq span{display:block;font-size:14px}
 <div class="chg-list" id="log"><table>
 <tr><th>#</th><th>Section</th><th>Change</th><th>Reason</th><th>Source</th></tr>
 <tr><td>—</td><td>All</td><td>First draft</td><td>Interaction details need confirmation before the pages are built</td><td>Code read of neodax PR #1868</td></tr>
+<tr><td>1</td><td>01, 03, 05–08</td><td>Added links to the interactive mockup</td><td>Static dialog sketches do not show the hand-over between two people or the automatic steps</td><td>Review feedback</td></tr>
 </table></div></div>
 
 <div class="shell">
@@ -183,6 +193,7 @@ ol.seq span{display:block;font-size:14px}
     <div class="eyebrow">NEODAX · ADMIN CONSOLE · PLATFORM FINANCE</div>
     <h1>Binance treasury transfers: operator interaction</h1>
     <p>How an operator funds the Binance account from custody, and sweeps funds from the transit address back to custody, in the admin console. The backend in neodax PR #1868 supports the whole flow; the console pages do not exist yet. This document describes the proposed pages against the real API so the interaction can be confirmed before they are built. Section 12 lists the 15 points that need an answer.</p>
+    <div class="cta"><div class="tx"><b>TRY IT · INTERACTIVE MOCKUP</b>A clickable prototype of the proposed page. Switch between three operators, propose, approve as a second person, watch both legs complete, and try the failure cases (Cage refuses, stalled before a leg is sent, stalled after it is sent). No backend and no real funds.</div><a class="go" href="binance-treasury-admin-mockup.html" target="_blank">Open the mockup ▸</a></div>
     <div class="chips"><span class="chip">draft v1</span><span class="chip">2026-11-23</span><span class="chip">backend: PR #1868 at 914bb438, not merged</span><span class="chip">frontend: not started</span></div>
     <div class="kpis">
       <div class="kpi"><div class="k">Admin endpoints</div><div class="v">11</div></div>
@@ -235,6 +246,7 @@ ol.seq span{display:block;font-size:14px}
       <p>Clicking a row opens the operation detail (section 07). The two Propose buttons are disabled, with the reason shown, when the matching feature flag is off or when Cage reports that execution is disabled.</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">TRY IT</b>See this step in the <a href="binance-treasury-admin-mockup.html" target="_blank">interactive mockup</a>.</div>
       <div class="mn"><b class="lb">EXISTING PAGE</b>The dashboard already has <code>pages/platformFinance/SpotCreditPage.tsx</code> with tabs and an operation detail dialog that has Approve and Reject. The new tab can follow the same pattern.</div>
       <div class="mn"><b class="lb">DATA SOURCE</b>A and B and the limits in C: <code>GET /profile</code>. Evidence lag in A: <code>GET /ingestion</code>. Net to Binance in C: <code>GET /flows</code>. D: <code>GET /operations</code>.</div>
       <div class="mn todo"><b class="lb">TO CONFIRM · Q2, Q7</b>Tab or separate menu. The list returns at most the newest 500 operations and has no paging.</div>
@@ -303,6 +315,7 @@ executing     ─▶ failed_terminal   <span class="c"># a leg failed for good</
       <p>The daily limit is <strong>not</strong> checked when proposing. It is checked at approval and enforced by Cage.</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">TRY IT</b>See this step in the <a href="binance-treasury-admin-mockup.html" target="_blank">interactive mockup</a>.</div>
       <div class="mn"><b class="lb">REQUEST</b><code>POST /fundings</code> or <code>POST /sweeps</code> with <code>asset</code>, <code>amount</code> (decimal string), <code>reason</code>, optional <code>risk_context</code>, and the key in the <code>Idempotency-Key</code> header or <code>idempotency_key</code> field.</div>
       <div class="mn"><b class="lb">FROZEN AT PROPOSAL</b>The profile id, its fingerprint, chain id and network are stored with the proposal. If the profile changes later, approval is refused.</div>
       <div class="mn todo"><b class="lb">TO CONFIRM · Q3, Q14</b>The console generates the idempotency key. Amount precision is not checked here (backend gap).</div>
@@ -329,6 +342,7 @@ executing     ─▶ failed_terminal   <span class="c"># a leg failed for good</
       <p>A proposal nobody decided on moves to <code>expired</code> 24 hours after it was created. The background worker does this, so the change appears within a few seconds of the deadline.</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">TRY IT</b>See this step in the <a href="binance-treasury-admin-mockup.html" target="_blank">interactive mockup</a>.</div>
       <div class="mn"><b class="lb">DAILY LIMIT IS ADVISORY HERE</b>Two approvers acting at the same moment can both pass this check. Cage enforces the real limit under a lock. The approval that loses is refused by Cage and ends as <code>failed_terminal</code> with <code>DAILY_LIMIT_EXCEEDED</code>. No extra funds move.</div>
       <div class="mn"><b class="lb">CODE</b><code>ApproveBinanceTreasury</code>, then <code>approveOperation</code> (<code>service.go:87-130</code>, outbox row at line 124).</div>
       <div class="mn todo"><b class="lb">TO CONFIRM · Q4, Q5, Q6</b>Whether approve should require a reason in the UI, whether cancel needs one, and whether anyone is notified.</div>
@@ -360,6 +374,7 @@ executing     ─▶ failed_terminal   <span class="c"># a leg failed for good</
       <p>The view refreshes on a timer while the state is <code>approved</code>, <code>executing</code>, <code>failed_retryable</code> or <code>manual_review</code>, and stops on a final state.</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">TRY IT</b>See this step in the <a href="binance-treasury-admin-mockup.html" target="_blank">interactive mockup</a>.</div>
       <div class="mn"><b class="lb">WHERE THE DATA COMES FROM</b><code>GET /operations/:id</code> returns the operation, its decoded details, the execution row, the approvals, the evidence timeline stored in Admin, and a live read of the operation and its legs from Cage. If the live read fails, the response still comes back with <code>cage_error</code> filled in.</div>
       <div class="mn"><b class="lb">CAGE STATES</b><code>ACCEPTED</code>, <code>LEG1_IN_PROGRESS</code>, <code>LEG2_IN_PROGRESS</code>, <code>SWEEP_IN_PROGRESS</code>, <code>STALLED</code>, <code>COMPLETED</code>, <code>FAILED_TERMINAL</code>, <code>ABANDONED</code>. Leg states: <code>PENDING</code>, <code>SUBMITTED</code>, <code>INCLUDED</code>, <code>FINAL</code>, <code>FAILED</code>, <code>ABANDONED</code>.</div>
       <div class="mn"><b class="lb">RETRY ON DISPATCH</b>Automatic, with a wait that doubles from 1 second up to 5 minutes. Sending the same operation again never creates a second transfer: Cage recognises the operation id.</div>
@@ -395,6 +410,7 @@ executing     ─▶ failed_terminal   <span class="c"># a leg failed for good</
       <p>If a funding is abandoned or fails after leg 1 was final, the money is at the transit address. It stays there. Getting it back is a normal sweep: proposed by one person and approved by another.</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">TRY IT</b>See this step in the <a href="binance-treasury-admin-mockup.html" target="_blank">interactive mockup</a>.</div>
       <div class="mn"><b class="lb">CODE</b>Admin: <code>AbandonBinanceTreasuryLeg</code>. Cage: <code>Service.Abandon</code> in <code>cage/binancetreasury/service.go</code>. The abandon request is signed the same way as a submission.</div>
       <div class="mn"><b class="lb">RETRYABLE LEG ERRORS</b><code>WITHDRAWAL_BREAKER_OPEN</code>, <code>CUSTODY_SUBMISSION_PAUSED</code>, <code>FEE_CAP_REACHED</code>, <code>STUCK_MAX_FEE_BUMPS</code>, <code>INCLUDED_TX_REVERTED</code>, <code>REORGED</code>, <code>REORG_SUSPECTED</code>, <code>PROFILE_CHANGED</code>, <code>ASSET_NOT_IN_PROFILE</code>.</div>
       <div class="mn todo"><b class="lb">TO CONFIRM · Q9, Q10</b>Abandon is a single-person action. Whether the page should offer a pre-filled sweep when funds are left at the transit address.</div>

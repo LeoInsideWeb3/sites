@@ -134,6 +134,14 @@ ol.seq span{display:block;font-size:14px}
 .wf .bt{border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:1px 12px;font:600 12px/1.9 var(--sans);background:#fff}
 .wf .bt.d{border-color:var(--del-b);color:var(--del-b)}
 .wf .lb2{min-width:128px;color:var(--ink3);font-size:12.5px}
+
+.cta{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin:22px 0 6px;padding:16px 20px;border:2px solid var(--ink);border-radius:6px;background:var(--amber-bg)}
+.cta .tx{flex:1;min-width:260px;color:var(--ink)}
+.cta .tx b{display:block;font:600 12px var(--sans);letter-spacing:.1em;color:var(--amber);margin-bottom:2px}
+.cta a.go{background:var(--accent);color:#fff;padding:9px 20px;border-radius:4px;text-decoration:none;font-weight:600;white-space:nowrap}
+.bar a.go{background:var(--accent);color:#fff;padding:4px 14px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:600}
+.mn.try{border-left-color:var(--accent);background:linear-gradient(90deg,var(--amber-bg),transparent)}
+.mn.try b.lb{color:var(--accent)}
 </style>
 </head>
 <body class="show-changes">
@@ -142,6 +150,7 @@ ol.seq span{display:block;font-size:14px}
   <div class="logo">Yellow<i style="font-style:normal">.</i></div>
   <div class="crumb">后管 · Binance 资金划转</div>
   <div class="sp"></div>
+  <a class="go" href="binance-treasury-admin-mockup.html?lang=zh" target="_blank">可点击的原型 ▸</a>
   <span class="pill">v1 · 待确认</span>
   <a class="lang" href="binance-treasury-admin-interaction.en.html">English</a>
 </div></div>
@@ -158,6 +167,7 @@ ol.seq span{display:block;font-size:14px}
 <div class="chg-list" id="log"><table>
 <tr><th>#</th><th>章节</th><th>改动</th><th>原因</th><th>来源</th></tr>
 <tr><td>—</td><td>全部</td><td>初稿</td><td>开发页面前需要先确认交互细节</td><td>阅读 neodax PR #1868 的代码</td></tr>
+<tr><td>1</td><td>01、03、05–08</td><td>加入可点击原型的入口</td><td>静态的弹窗示意看不出两个人之间的交接和自动进行的步骤</td><td>评审反馈</td></tr>
 </table></div></div>
 
 <div class="shell">
@@ -183,6 +193,7 @@ ol.seq span{display:block;font-size:14px}
     <div class="eyebrow">NEODAX · 后管 · PLATFORM FINANCE</div>
     <h1>Binance 资金划转：运营操作与交互</h1>
     <p>运营怎样在后管里把托管资金入金到 Binance 账户，以及怎样把中转地址上的资金扫回托管。neodax PR #1868 的后端已经能支撑整个流程，后管页面还没有开发。本文按真实接口描述建议的页面，供开发前确认交互。第 12 节列出了 15 个需要答复的问题。</p>
+    <div class="cta"><div class="tx"><b>动手试一下 · 可点击的原型</b>按建议的页面做的可点击原型。可以在三个操作人之间切换，提案、换一个人审批、看两段自动完成，也可以试几种失败情况（Cage 拒绝、发出前卡住、发出后卡住）。不连后端，没有真实资金。</div><a class="go" href="binance-treasury-admin-mockup.html?lang=zh" target="_blank">打开原型 ▸</a></div>
     <div class="chips"><span class="chip">初稿 v1</span><span class="chip">2026-11-23</span><span class="chip">后端：PR #1868，提交 914bb438，未合并</span><span class="chip">前端：未开始</span></div>
     <div class="kpis">
       <div class="kpi"><div class="k">后管接口</div><div class="v">11<small>个</small></div></div>
@@ -235,6 +246,7 @@ ol.seq span{display:block;font-size:14px}
       <p>点击列表里的一行打开操作详情（第 07 节）。当对应的功能开关关闭，或 Cage 报告执行被禁用时，两个提案按钮置灰，并显示原因。</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">动手试</b>在<a href="binance-treasury-admin-mockup.html?lang=zh" target="_blank">可点击的原型</a>里看这一步。</div>
       <div class="mn"><b class="lb">现有页面</b>dashboard 里已经有 <code>pages/platformFinance/SpotCreditPage.tsx</code>，带标签页和一个有 Approve、Reject 的操作详情弹窗。新标签页可以照这个写法。</div>
       <div class="mn"><b class="lb">数据来源</b>A、B 和 C 里的限额：<code>GET /profile</code>。A 里的证据延迟：<code>GET /ingestion</code>。C 里的净入金：<code>GET /flows</code>。D：<code>GET /operations</code>。</div>
       <div class="mn todo"><b class="lb">待确认 · Q2、Q7</b>用标签页还是单独的菜单。列表最多返回最新的 500 条，不分页。</div>
@@ -303,6 +315,7 @@ executing     ─▶ failed_terminal   <span class="c"># 某一段彻底失败</
       <p>提案时<strong>不检查</strong>每日限额。它在审批时预检，最终由 Cage 控制。</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">动手试</b>在<a href="binance-treasury-admin-mockup.html?lang=zh" target="_blank">可点击的原型</a>里看这一步。</div>
       <div class="mn"><b class="lb">请求</b><code>POST /fundings</code> 或 <code>POST /sweeps</code>，字段为 <code>asset</code>、<code>amount</code>（十进制字符串）、<code>reason</code>，可选 <code>risk_context</code>。幂等键放在 <code>Idempotency-Key</code> 请求头或 <code>idempotency_key</code> 字段里。</div>
       <div class="mn"><b class="lb">提案时固定下来的内容</b>配置 ID、配置指纹、链 ID 和网络随提案一起保存。之后配置如果变了，审批会被拒绝。</div>
       <div class="mn todo"><b class="lb">待确认 · Q3、Q14</b>幂等键由后管页面生成。这一步不检查金额的小数位数（后端缺口）。</div>
@@ -329,6 +342,7 @@ executing     ─▶ failed_terminal   <span class="c"># 某一段彻底失败</
       <p>没人处理的提案在创建 24 小时后变成 <code>expired</code>。这是后台任务做的，所以到期后几秒内状态会变。</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">动手试</b>在<a href="binance-treasury-admin-mockup.html?lang=zh" target="_blank">可点击的原型</a>里看这一步。</div>
       <div class="mn"><b class="lb">这里的每日限额只是预检</b>两个审批人同时操作时，可能都通过这项检查。真正的限额由 Cage 在加锁的情况下控制。后到的那一笔会被 Cage 拒绝，最终是 <code>failed_terminal</code>，错误码 <code>DAILY_LIMIT_EXCEEDED</code>。不会多划出资金。</div>
       <div class="mn"><b class="lb">代码依据</b><code>ApproveBinanceTreasury</code>，然后是 <code>approveOperation</code>（<code>service.go:87-130</code>，outbox 记录在第 124 行）。</div>
       <div class="mn todo"><b class="lb">待确认 · Q4、Q5、Q6</b>页面上审批要不要强制填原因，撤销要不要原因，要不要通知相关人。</div>
@@ -360,6 +374,7 @@ executing     ─▶ failed_terminal   <span class="c"># 某一段彻底失败</
       <p>状态是 <code>approved</code>、<code>executing</code>、<code>failed_retryable</code> 或 <code>manual_review</code> 时，详情定时刷新；到了终态就停止。</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">动手试</b>在<a href="binance-treasury-admin-mockup.html?lang=zh" target="_blank">可点击的原型</a>里看这一步。</div>
       <div class="mn"><b class="lb">数据来源</b><code>GET /operations/:id</code> 返回操作本身、解析后的明细、执行记录、审批记录、Admin 里保存的证据时间线，以及从 Cage 实时读到的操作和各段状态。实时读取失败时接口仍然返回，并在 <code>cage_error</code> 里写明原因。</div>
       <div class="mn"><b class="lb">Cage 的状态</b>操作：<code>ACCEPTED</code>、<code>LEG1_IN_PROGRESS</code>、<code>LEG2_IN_PROGRESS</code>、<code>SWEEP_IN_PROGRESS</code>、<code>STALLED</code>、<code>COMPLETED</code>、<code>FAILED_TERMINAL</code>、<code>ABANDONED</code>。每一段：<code>PENDING</code>、<code>SUBMITTED</code>、<code>INCLUDED</code>、<code>FINAL</code>、<code>FAILED</code>、<code>ABANDONED</code>。</div>
       <div class="mn"><b class="lb">派发失败的重试</b>自动进行，等待时间从 1 秒开始翻倍，最长 5 分钟。同一笔操作重复发送不会产生第二笔划转，因为 Cage 认操作 ID。</div>
@@ -395,6 +410,7 @@ executing     ─▶ failed_terminal   <span class="c"># 某一段彻底失败</
       <p>入金在第 1 段确认之后被放弃或失败，资金就停在中转地址上，不会自动处理。把它取回来要走一次普通的扫回：一个人提案，另一个人审批。</p>
     </div>
     <div class="margin">
+      <div class="mn try"><b class="lb">动手试</b>在<a href="binance-treasury-admin-mockup.html?lang=zh" target="_blank">可点击的原型</a>里看这一步。</div>
       <div class="mn"><b class="lb">代码依据</b>Admin：<code>AbandonBinanceTreasuryLeg</code>。Cage：<code>cage/binancetreasury/service.go</code> 的 <code>Service.Abandon</code>。放弃请求和派发请求一样带签名。</div>
       <div class="mn"><b class="lb">会自动重试的错误码</b><code>WITHDRAWAL_BREAKER_OPEN</code>、<code>CUSTODY_SUBMISSION_PAUSED</code>、<code>FEE_CAP_REACHED</code>、<code>STUCK_MAX_FEE_BUMPS</code>、<code>INCLUDED_TX_REVERTED</code>、<code>REORGED</code>、<code>REORG_SUSPECTED</code>、<code>PROFILE_CHANGED</code>、<code>ASSET_NOT_IN_PROFILE</code>。</div>
       <div class="mn todo"><b class="lb">待确认 · Q9、Q10</b>放弃只需要一个人。资金留在中转地址时，页面要不要提供预填好的扫回提案。</div>
