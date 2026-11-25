@@ -166,12 +166,12 @@ ol.seq li{color:var(--ink)}
   <div class="logo">Yellow<i style="font-style:normal">.</i></div>
   <div class="crumb">Perpetuals · XRP 计价永续方案</div>
   <div class="sp"></div>
-  <span class="pill">v4 · 待评审</span>
+  <span class="pill">v5 · 待评审</span>
   <a class="lang" href="xrp-quoted-perps-investigation.en.html" onclick="this.href=this.href.split('#')[0]+location.hash">English</a>
 </div></div>
 
 <div class="banner"><div class="in">
-  <span><b>v4 · 2026-11-19</b>　2 个章节有更新</span>
+  <span><b>v5 · 2026-11-25</b>　2 个章节有更新</span>
   <label class="tog"><input type="checkbox" id="t-show" checked> 显示改动</label>
   <label class="tog"><input type="checkbox" id="t-del"> 隐藏删除内容</label>
   <label class="tog"><input type="checkbox" id="t-only"> 只看有改动的章节</label>
@@ -179,12 +179,12 @@ ol.seq li{color:var(--ink)}
   <button class="btn" id="b-read" data-done="已全部标为已读">全部标为已读</button>
   <span style="color:var(--ink3)">快捷键　n 下一处　p 上一处</span>
 </div>
-<div class="chg-list" id="log"><table><tr><th>#</th><th>位置</th><th>改动</th><th>原因</th></tr><tr><td>1</td><td>05a-1 参数表</td><td>新增：所有市场参数一张表，需风控定的值标 TODO</td><td>评审要求给出具体规则</td></tr><tr><td>2</td><td>05a-2 指数价</td><td>新增：公式、过期规则，以及与现有 Binance 转发指数的区别</td><td>指数价只有大纲</td></tr><tr><td>3</td><td>05a-3 标记价</td><td>新增：腿状态表、SAFE_MODE 冻结值、保护检查、第二期三者中位数加基差</td><td>所有主流交易所都含基差项</td></tr><tr><td>4</td><td>05a-4 资金费率</td><td>新增：周期归一、上限、结算公式、第二期溢价指数公式、动态周期</td><td>资金费周期和公式缺失</td></tr><tr><td>5</td><td>05a-5 交易手续费</td><td>新增：XRP 计价手续费公式、USD 成交量规则、强平费、算例</td><td>手续费规则缺失</td></tr><tr><td>6</td><td>05a-6 其他交易所</td><td>新增：11 家交易所的指数价、标记价、资金费、手续费对比及来源</td><td>评审要求参考最好的交易所</td></tr><tr><td>7</td><td>09 开发拆分与测试</td><td>新增开发流程入口：每个 PR 最多 300 行生产代码、标题和描述格式、按系列推进；并说明下表 6 个 PR 只是方向，实际拆成 15 个</td><td>开发要求把流程链接到方案里</td></tr></table></div></div>
+<div class="chg-list" id="log"><table><tr><th>#</th><th>位置</th><th>改动</th><th>原因</th></tr><tr><td>1</td><td>05a-1 参数表</td><td>新增：所有市场参数一张表，需风控定的值标 TODO</td><td>评审要求给出具体规则</td></tr><tr><td>2</td><td>05a-2 指数价</td><td>新增：公式、过期规则，以及与现有 Binance 转发指数的区别</td><td>指数价只有大纲</td></tr><tr><td>3</td><td>05a-3 标记价</td><td>新增：腿状态表、SAFE_MODE 冻结值、保护检查、第二期三者中位数加基差</td><td>所有主流交易所都含基差项</td></tr><tr><td>4</td><td>05a-4 资金费率</td><td>新增：周期归一、上限、结算公式、第二期溢价指数公式、动态周期</td><td>资金费周期和公式缺失</td></tr><tr><td>5</td><td>05a-5 交易手续费</td><td>新增：XRP 计价手续费公式、USD 成交量规则、强平费、算例</td><td>手续费规则缺失</td></tr><tr><td>6</td><td>05a-6 其他交易所</td><td>新增：11 家交易所的指数价、标记价、资金费、手续费对比及来源</td><td>评审要求参考最好的交易所</td></tr><tr><td>7</td><td>09 开发拆分与测试</td><td>新增开发流程入口：每个 PR 最多 300 行生产代码、标题和描述格式、按系列推进；并说明下表 6 个 PR 只是方向，实际拆成 15 个</td><td>开发要求把流程链接到方案里</td></tr><tr><td>8</td><td>05-3 对冲比例</td><td>新增：等名义价值对冲、盈亏推导、XRP 腿再平衡要求和残余风险</td><td>外部方案评审（2026-11-25）提出按名义价值对冲</td></tr><tr><td>9</td><td>05a-3 标记价</td><td>新增：溢价的精确关系和 2% 护栏的含义；记录不直接用 Binance 标记价的理由</td><td>同上，外部方案建议直接用 Binance 标记价相除</td></tr><tr><td>10</td><td>05a-4 资金费率</td><td>新增：两腿差值成立的三个条件（名义价值相等、结算时刻相同、用实际结算费率），已核对结算网格代码</td><td>同上，外部方案只写了前提没有落到我们的系统</td></tr></table></div></div>
 
 <div class="shell">
 <nav class="toc" id="toc">
   <div class="k">目录</div>
-  <div class="g" data-c="summary"><a class="c" href="#summary"><span><span class="no">01</span>结论</span></a><div class="subs"><a class="s" href="#summary-1">各部分结论</a><a class="s" href="#summary-2">主要风险</a></div></div><div class="g" data-c="scope"><a class="c" href="#scope"><span><span class="no">02</span>产品定义</span></a><div class="subs"><a class="s" href="#scope-1">已确认的前提</a><a class="s" href="#scope-2">用户需要理解的一点</a><a class="s" href="#scope-3">为什么多数交易所不上这类合约</a></div></div><div class="g" data-c="today"><a class="c" href="#today"><span><span class="no">03</span>代码现状</span></a><div class="subs"><a class="s" href="#today-1">B-Book 市场现在怎么运行</a><a class="s" href="#today-2">对 XRP 计价市场不成立的地方</a><a class="s" href="#today-3">已经具备的</a></div></div><div class="g" data-c="margin"><a class="c" href="#margin"><span><span class="no">04</span>保证金模型</span></a><div class="subs"><a class="s" href="#margin-1">改动</a><a class="s" href="#margin-2">第二期：XRP 市场的全仓</a></div></div><div class="g" data-c="price"><a class="c" href="#price"><span><span class="no">05</span>价格与资金费</span></a><div class="subs"><a class="s" href="#price-1">价格</a><a class="s" href="#price-2">资金费率</a></div></div><div class="g" data-c="rules"><a class="c" href="#rules"><span><span class="no">05a</span>市场规则手册</span><span class="b new">新增</span></a><div class="subs"><a class="s" href="#rules-1">1. 参数表</a><a class="s" href="#rules-2">2. 指数价</a><a class="s" href="#rules-3">3. 标记价</a><a class="s" href="#rules-4">4. 资金费率</a><a class="s" href="#rules-5">5. 交易手续费</a><a class="s" href="#rules-6">6. 其他交易所怎么做</a></div></div><div class="g" data-c="venues"><a class="c" href="#venues"><span><span class="no">05b</span>外部行情数据</span></a><div class="subs"><a class="s" href="#venues-1">各交易所上架情况</a><a class="s" href="#venues-2">反向现货对太薄，不能作为价格源</a><a class="s" href="#venues-3">参照设计：Binance ETHBTC 永续</a></div></div><div class="g" data-c="funds"><a class="c" href="#funds"><span><span class="no">06</span>保证金划转与 USD 口径</span></a><div class="subs"><a class="s" href="#funds-1">把 XRP 划入合约账户</a><a class="s" href="#funds-2">USD 折算</a></div></div><div class="g" data-c="risk"><a class="c" href="#risk"><span><span class="no">07</span>风控与上线</span></a><div class="subs"><a class="s" href="#risk-1">亏损落在哪里</a><a class="s" href="#risk-2">新增的控制</a><a class="s" href="#risk-3">上线顺序</a></div></div><div class="g" data-c="limits"><a class="c" href="#limits"><span><span class="no">08</span>局限与待确认问题</span></a><div class="subs"><a class="s" href="#limits-1">局限</a><a class="s" href="#limits-2">待确认问题</a><a class="s" href="#limits-3">本次调研未确认的内容</a></div></div><div class="g" data-c="work"><a class="c" href="#work"><span><span class="no">09</span>开发拆分与测试</span><span class="b">v4</span></a><div class="subs"><a class="s" href="#work-1">建议的 PR</a><a class="s" href="#work-2">单元测试</a><a class="s" href="#work-3">集成测试（本地环境或 UAT）</a><a class="s" href="#work-4">回归</a></div></div>
+  <div class="g" data-c="summary"><a class="c" href="#summary"><span><span class="no">01</span>结论</span></a><div class="subs"><a class="s" href="#summary-1">各部分结论</a><a class="s" href="#summary-2">主要风险</a></div></div><div class="g" data-c="scope"><a class="c" href="#scope"><span><span class="no">02</span>产品定义</span></a><div class="subs"><a class="s" href="#scope-1">已确认的前提</a><a class="s" href="#scope-2">用户需要理解的一点</a><a class="s" href="#scope-3">为什么多数交易所不上这类合约</a></div></div><div class="g" data-c="today"><a class="c" href="#today"><span><span class="no">03</span>代码现状</span></a><div class="subs"><a class="s" href="#today-1">B-Book 市场现在怎么运行</a><a class="s" href="#today-2">对 XRP 计价市场不成立的地方</a><a class="s" href="#today-3">已经具备的</a></div></div><div class="g" data-c="margin"><a class="c" href="#margin"><span><span class="no">04</span>保证金模型</span></a><div class="subs"><a class="s" href="#margin-1">改动</a><a class="s" href="#margin-2">第二期：XRP 市场的全仓</a></div></div><div class="g" data-c="price"><a class="c" href="#price"><span><span class="no">05</span>价格与资金费</span><span class="b">v5</span></a><div class="subs"><a class="s" href="#price-1">价格</a><a class="s" href="#price-2">资金费率</a><a class="s" href="#price-3">对冲比例</a></div></div><div class="g" data-c="rules"><a class="c" href="#rules"><span><span class="no">05a</span>市场规则手册</span><span class="b">v5</span></a><div class="subs"><a class="s" href="#rules-1">1. 参数表</a><a class="s" href="#rules-2">2. 指数价</a><a class="s" href="#rules-3">3. 标记价</a><a class="s" href="#rules-4">4. 资金费率</a><a class="s" href="#rules-5">5. 交易手续费</a><a class="s" href="#rules-6">6. 其他交易所怎么做</a></div></div><div class="g" data-c="venues"><a class="c" href="#venues"><span><span class="no">05b</span>外部行情数据</span></a><div class="subs"><a class="s" href="#venues-1">各交易所上架情况</a><a class="s" href="#venues-2">反向现货对太薄，不能作为价格源</a><a class="s" href="#venues-3">参照设计：Binance ETHBTC 永续</a></div></div><div class="g" data-c="funds"><a class="c" href="#funds"><span><span class="no">06</span>保证金划转与 USD 口径</span></a><div class="subs"><a class="s" href="#funds-1">把 XRP 划入合约账户</a><a class="s" href="#funds-2">USD 折算</a></div></div><div class="g" data-c="risk"><a class="c" href="#risk"><span><span class="no">07</span>风控与上线</span></a><div class="subs"><a class="s" href="#risk-1">亏损落在哪里</a><a class="s" href="#risk-2">新增的控制</a><a class="s" href="#risk-3">上线顺序</a></div></div><div class="g" data-c="limits"><a class="c" href="#limits"><span><span class="no">08</span>局限与待确认问题</span></a><div class="subs"><a class="s" href="#limits-1">局限</a><a class="s" href="#limits-2">待确认问题</a><a class="s" href="#limits-3">本次调研未确认的内容</a></div></div><div class="g" data-c="work"><a class="c" href="#work"><span><span class="no">09</span>开发拆分与测试</span></a><div class="subs"><a class="s" href="#work-1">建议的 PR</a><a class="s" href="#work-2">单元测试</a><a class="s" href="#work-3">集成测试（本地环境或 UAT）</a><a class="s" href="#work-4">回归</a></div></div>
 </nav>
 
 <main>
@@ -192,7 +192,7 @@ ol.seq li{color:var(--ink)}
     <div class="eyebrow">调研结论 · 待评审草稿</div>
     <h1>XRP 计价 B-Book 永续：可行性与设计</h1>
     <p><strong>可行，中等风险。</strong>撮合、结算、资金费收付、强平和 ADL 已经按计价资产运行，不需要重写。需要新做五件事：合成交叉价、资金费率、XRP 划转到合约账户、按资产分组的保证金计算、给下游服务的 USD 折算。</p>
-    <div class="chips"><span class="chip">draft v4</span><span class="chip">2026-11-19</span><span class="chip">待评审</span><span class="chip">尚未写代码</span></div>
+    <div class="chips"><span class="chip">draft v5</span><span class="chip">2026-11-25</span><span class="chip">待评审</span><span class="chip">尚未写代码</span></div>
     <div class="kpis"><div class="kpi"><div class="k">必须新做</div><div class="v">5<small>项</small></div></div><div class="kpi"><div class="k">拟拆 PR</div><div class="v">6<small>个</small></div></div><div class="kpi"><div class="k">预计交付周期（AI 开发）</div><div class="v">4–6<small>周，待确认</small></div></div><div class="kpi"><div class="k">待决 TODO 标记</div><div class="v">14</div></div></div>
   </header>
 
@@ -268,7 +268,7 @@ ol.seq li{color:var(--ink)}
     <li><b>校验下单资产</b><span>PM Perp 应拒绝资产不等于市场计价资产的锁定请求。目前它直接信任 trading-api。</span></li>
     <li><b>账户汇总</b><span>REST、WebSocket、Kafka 中的账户汇总值，要么按资产折算成 USD 后再相加，要么按资产分别返回。<code>*_usd</code> 字段已经是按资产折算的，保持不变。</span></li>
   </ol></div><div class="margin"></div><div class="main"><h2 id="margin-2">第二期：XRP 市场的全仓</h2><p>全仓需要强平链路按资产组运行：扫描器、stage 0 和 stage 1，以及目前只携带单一资产的 <code>LiquidationCompleteOp</code>（<code>raft/types/change.go:229-234</code>）。账户锁现在是整个账户级别的，也需要缩小到组。这是一个独立项目，第一期不需要。</p></div><div class="margin"></div></div></section>
-<section class="chapter" id="price" data-rev="0"><div class="chap-h"><div class="eyebrow">设计 2 / 4</div><h1><span class="no">05</span>合成价格与资金费率</h1><p class="lede">两者都由我们已经在定价的两条 USDT 永续推导：<strong>BTCUSDT-PERP 和 XRPUSDT-PERP</strong>（ETH 市场用 ETHUSDT-PERP）。</p></div><div class="sec"><div class="main"><h2 id="price-1">价格</h2><pre><span class="c"># 任一条腿更新时重新计算</span>
+<section class="chapter upd fresh" id="price" data-rev="5"><div class="chap-h"><div class="eyebrow">设计 2 / 4</div><h1><span class="no">05</span>合成价格与资金费率<span class="pillrev">v5 更新</span></h1><p class="lede">两者都由我们已经在定价的两条 USDT 永续推导：<strong>BTCUSDT-PERP 和 XRPUSDT-PERP</strong>（ETH 市场用 ETHUSDT-PERP）。</p></div><div class="sec"><div class="main"><h2 id="price-1">价格</h2><pre><span class="c"># 任一条腿更新时重新计算</span>
 index(BTCXRP) = index(BTCUSDT) / index(XRPUSDT)
 mark(BTCXRP)  = mark(BTCUSDT)  / mark(XRPUSDT)</pre><p>在 quote 服务中增加一个"派生市场"阶段，放在 <code>quotes_publisher.go</code> 现有发布点之后。它缓存每条腿的最新输出，任一条腿变化就重算，并为派生 symbol 发布一条普通的 <code>EventQuoteObserved</code>。因为它消费的是我们自己聚合后的输出，旧路径和多交易所 oracle 路径都适用，并且继承了每条腿的异常值过滤。</p><h3>保护规则</h3><ul class="gate">
     <li><span class="tag stop">不出价</span>两条腿的时间戳相差超过阈值（建议 1 到 2 秒）。</li>
@@ -284,8 +284,18 @@ funding(BTCXRP) = funding(BTCUSDT) - funding(XRPUSDT)</pre><p>派生阶段算出
   </ul></div><div class="margin"><div class="mn"><b class="lb">为什么取两条腿之差</b>
     
     <p>做空 BTCXRP 的做市商用"多 BTCUSDT + 空 XRPUSDT"对冲。在这个对冲组合上，他支付 BTC 的资金费、收取 XRP 的资金费。在我们的市场上收取这个差值，正好把这笔持有成本传递过去，做市商不会暴露在资金费套利之下。B-Book 市场的资金费在持仓人之间收付，不涉及庄家账户（<code>funding_rate/executor.go:206-228</code>）。</p>
-  </div></div></div></section>
-<section class="chapter upd fresh isnew" id="rules" data-rev="3"><div class="chap-h"><div class="eyebrow">规格</div><h1><span class="no">05a</span>市场规则手册：指数价、标记价、资金费、手续费<span class="pillrev new">v3 新增</span></h1><p class="lede">评审可以逐条核对的具体规则。<span class="tag keep">现有</span> 表示 USDT 永续今天的做法（已在代码中核实）；<span class="tag stop">新增</span> 表示 XRP 市场要新做的部分；<span class="tag a">TODO</span> 表示上线前需要风控拍板的数值。示例中的数字仅为演示。</p></div><div class="sec"><div class="main"><h2 id="rules-1">1. 参数表</h2></div><div class="margin"></div><div class="wide"><div class="tw"><table class="t"><thead><tr><th>参数</th><th>BTCXRP-PERP / ETHXRP-PERP</th><th>说明</th></tr></thead><tbody>
+  </div></div><div class="main"><h2 id="price-3"><ins>3. 对冲比例：做市商怎么复制这个合约</ins></h2><p><ins>做多 q 个 BTCXRP，等价于在两条 USDT 腿上持有<strong>名义价值相等</strong>的反向头寸，而不是币的数量相等。下面 B = mark(BTCUSDT)，X = mark(XRPUSDT)，S = B / X。</ins></p><table class="t"><thead><tr><th>腿</th><th>方向</th><th>数量</th><th>USDT 名义价值</th></tr></thead><tbody>
+  <tr><td>BTCUSDT</td><td>多</td><td>q BTC</td><td>q &times; B</td></tr>
+  <tr><td>XRPUSDT</td><td>空</td><td>q &times; S XRP</td><td>q &times; S &times; X = q &times; B</td></tr>
+  </tbody></table><p><ins>做空 BTCXRP 则两条腿都反过来。</ins></p><pre><span class="c"># 价格从 (B0, X0) 变到 (B1, X1)</span>
+hedge_pnl_USDT = q &times; (B1 &minus; B0) &minus; q &times; S0 &times; (X1 &minus; X0)
+               = q &times; X1 &times; (S1 &minus; S0)
+contract_pnl_XRP = q &times; (S1 &minus; S0)      <span class="c"># 按 X1 折成 USDT 后与上式相等</span></pre><p><ins>所以按当时的 S 建立的对冲在那一刻是精确的。但两边币种不同：对冲盈亏落在 USDT，做市商在我们市场上的盈亏是 XRP。价格变动后要把 XRP 空头调回 q &times; S，或者把 USDT 盈亏换成 XRP，否则累计盈亏会暴露在 XRP 兑 USDT 的价格上。05a-4 的资金费差值也只在这个比例下精确。</ins></p><ul class="check">
+    <li><ins>再平衡阈值（S 偏离多少调一次）由做市商定（<span class="tag a">TODO</span>）。对冲在仓库外，我们只需要在做市商对接文档里写明这条要求。</ins></li>
+    <li><ins>残余风险：我们两条腿的标记价是多交易所聚合值，做市商在 Binance 对冲，两者通常相差几个基点，由做市商承担（理由见 05a-3）。</ins></li>
+    <li><ins>手续费和资金费都以 XRP 收付，做市商要自己决定是换回 USDT 还是保留 XRP 库存。</ins></li>
+  </ul></div><div class="margin"><div class="mn chg"><b class="lb">本次改动 #8</b>外部方案评审（2026-11-25）提出两条腿按名义价值相等对冲。这里补上盈亏推导，并说明为什么需要再平衡。</div></div></div></section>
+<section class="chapter upd fresh" id="rules" data-rev="5"><div class="chap-h"><div class="eyebrow">规格</div><h1><span class="no">05a</span>市场规则手册：指数价、标记价、资金费、手续费<span class="pillrev">v5 更新</span></h1><p class="lede">评审可以逐条核对的具体规则。<span class="tag keep">现有</span> 表示 USDT 永续今天的做法（已在代码中核实）；<span class="tag stop">新增</span> 表示 XRP 市场要新做的部分；<span class="tag a">TODO</span> 表示上线前需要风控拍板的数值。示例中的数字仅为演示。</p></div><div class="sec"><div class="main"><h2 id="rules-1">1. 参数表</h2></div><div class="margin"></div><div class="wide"><div class="tw"><table class="t"><thead><tr><th>参数</th><th>BTCXRP-PERP / ETHXRP-PERP</th><th>说明</th></tr></thead><tbody>
   <tr><td>标的 / 计价 / 保证金币种</td><td>BTC（ETH）/ XRP / XRP</td><td>定义 A：盈亏、手续费、资金费全部以 XRP 计。</td></tr>
   <tr><td>合约类型</td><td>相对计价币种的线性合约</td><td>数量以标的币计，价格单位为每个标的币多少 XRP。名义价值（XRP）= 数量 &times; 价格。多头盈亏（XRP）= 数量 &times;（平仓价 &minus; 开仓价）。</td></tr>
   <tr><td>执行账本</td><td><code>B_BOOK</code></td><td>对手方是盘口上的挂单方，深度由自有做市商提供。</td></tr>
@@ -323,7 +333,14 @@ index(ETHXRP) = index(ETHUSDT) / index(XRPUSDT)
   </tbody></table></div></div><div class="main"><p><strong>恢复。</strong>两条腿连续 NORMAL 满现有的 10 秒预热期（<code>recovery_warmup_sec</code>），然后按其他市场同样的自动解除规则清除冻结。</p><h3>保护检查 <span class="tag stop">新增</span></h3><ul class="check">
     <li>|标记价 &minus; 指数价| / 指数价超过 <strong>2%</strong>（<span class="tag a">TODO</span>）：告警并禁止开新仓。两者出自同样两条腿，正常不会触发，用来发现某条腿出错。</li>
     <li>与 Binance XRPBTC 或 XRPETH 现货中间价的倒数相差超过 <strong>1%</strong>：告警并禁止开新仓。只做交叉验证，不参与定价（05b）。</li>
-  </ul><h3>第二期：加入基差项（所有主流交易所都有）</h3><p>纯比值忽略了我们自己的盘口。Binance、Bybit、Bitget、Gate、Hyperliquid 都取<strong>三者中位数</strong>：</p><ol class="seq">
+  </ul><h3><ins>溢价关系与 2% 护栏的含义</ins> <span class="tag stop">新增</span></h3><pre>P_leg   = mark / index &minus; 1                  <span class="c"># 每条腿自己的溢价</span>
+P_cross = (1 + P_BTC) / (1 + P_XRP) &minus; 1     <span class="c"># 精确</span>
+        &asymp; P_BTC &minus; P_XRP                     <span class="c"># 溢价很小时</span></pre><p><ins>例（演示）：BTCUSDT 标记价 100,100、指数价 100,000（+0.10%）；XRPUSDT 2.004、2.000（+0.20%）。BTCXRP 标记价 49,950.10、指数价 50,000，溢价 &minus;0.0998%。所以上面 2% 的护栏相当于两条腿溢价之差达到 2%，正常远不会触发，触发就说明某条腿的标记价或指数价出错。这里的溢价是标记价相对指数价的偏离，不是资金费公式里的冲击溢价指数。</ins></p><h3><ins>为什么不直接用 Binance 的标记价</ins></h3><p><ins>外部方案建议直接用 Binance 两个合约的标记价相除，理由是简单，而且和对冲头寸一致。第一期我们用自己两条腿的聚合标记价：</ins></p><ul class="pts">
+    <li><ins>和 BTCUSDT-PERP、XRPUSDT-PERP 的强平口径一致：同一时刻，同一个用户的 USDT 仓位和 XRP 仓位用的是同一组价格。</ins></li>
+    <li><ins>Binance 断线时聚合器还有 OKX、Bybit 兜底，派生市场直接继承 DEGRADED 和 SAFE_MODE 状态。只用 Binance 就要另写一套断线处理。</ins></li>
+    <li><ins>代价是和做市商的对冲价有几个基点的偏差（05-3）。</ins></li>
+    <li><ins>指数价两种做法没有区别：我们腿上的指数价本来就是转发的 Binance 指数。</ins></li>
+  </ul><div class="mn inl chg"><b class="lb">本次改动 #9</b>来源：外部方案评审（2026-11-25）。精确公式解释了护栏阈值；数据源的取舍写在这里，评审可以直接反对。</div><h3>第二期：加入基差项（所有主流交易所都有）</h3><p>纯比值忽略了我们自己的盘口。Binance、Bybit、Bitget、Gate、Hyperliquid 都取<strong>三者中位数</strong>：</p><ol class="seq">
     <li>指数 &times;（1 + 上一期资金费率 &times; 距下次结算时间 / 周期）</li>
     <li>指数 + 盘口中间价与指数之差的移动平均</li>
     <li>最新成交价</li>
@@ -343,7 +360,11 @@ rate = clamp(raw, &minus;cap, +cap)             <span class="c"># cap = max_fund
   </tbody></table></div></div><div class="main"><ul class="gate">
     <li><span class="tag stop">跳过</span>结算时任一条腿的费率超过 <strong>60 秒</strong>没更新（<span class="tag a">TODO</span>）：该市场本周期跳过并告警，不使用过期费率收费。运维有补录工具（<code>funding_rate/backfill.go</code>），是否支持派生市场需确认。</li>
     <li><span class="tag a">改动</span>现在某个市场行情中断后，会一直用最后一次费率结算（<code>funding_rate/types.go:73-82</code>）。新鲜度检查对所有市场生效。</li>
-  </ul><h3>结算 <span class="tag keep">现有</span></h3><pre>payment_XRP = 持仓数量 &times; 结算时标记价 &times; 费率
+  </ul><h3><ins>差值成立的三个条件</ins> <span class="tag stop">新增</span></h3><p><ins>F(BTCXRP) = F(BTCUSDT) &minus; F(XRPUSDT) 只有在下面三个条件下，才正好等于做市商对冲组合的资金费成本：</ins></p><ol class="seq">
+    <li><ins><strong>名义价值相等。</strong>我们的资金费名义价值是 q &times; mark(BTCXRP) XRP，按 mark(XRPUSDT) 折算后等于 q &times; mark(BTCUSDT) USDT，正好是 BTC 腿的名义价值。XRP 腿需要按 05-3 保持在 q &times; S。</ins></li>
+    <li><ins><strong>结算时刻相同。</strong>我们的结算网格按 UTC 零点对齐（<code>funding_rate/settlement_time.go</code> 的 <code>NextAlignedSettlementTime</code>），8 小时周期就是 00:00、08:00、16:00，和 Binance 两条腿的默认时刻一致。如果 Binance 把某条腿改成 4 小时或 1 小时，按上面的归一化处理后，差值仍是这个周期内的平均持有成本，但单次结算和做市商那边不再逐笔对上。</ins></li>
+    <li><ins><strong>用两条腿实际结算的费率。</strong>Binance 推送的是下一期的预测费率，结算前一直在变。我们取结算时刻前最后一次的值（受上面 60 秒新鲜度限制），与现有 USDT 市场的做法相同。它和 Binance 最终公布的费率可能有很小的差异，由做市商承担。</ins></li>
+  </ol><div class="mn inl chg"><b class="lb">本次改动 #10</b>来源：外部方案评审（2026-11-25）。原方案只写了前提，这里核对了我们的结算网格代码并写出具体条件。</div><h3>结算 <span class="tag keep">现有</span></h3><pre>payment_XRP = 持仓数量 &times; 结算时标记价 &times; 费率
 费率 &gt; 0：多头付，空头收
 费率 &lt; 0：空头付，多头收</pre><ul class="check">
     <li>每个对齐时刻对所有持仓执行。因强平被锁定的仓位跳过（<code>executor.go:119-125</code>）。</li>
@@ -463,7 +484,7 @@ I    = 交叉市场取 0（Binance ETHBTC 取 0）；USDT 市场为每 8 小时 
     <li>XRP 手续费的回购路径没有深入追踪。</li>
     <li>没有检查 Hyperliquid 和更小的交易所是否有 BTC/XRP 或 ETH/XRP 永续。</li>
   </ul></div><div class="margin"></div></div></section>
-<section class="chapter upd fresh" id="work" data-rev="4"><div class="chap-h"><div class="eyebrow"></div><h1><span class="no">09</span>建议的开发拆分与测试方案<span class="pillrev">v4 更新</span></h1><p class="lede">仅供评审。本方案获批之前，这里的任何工作都不会开始。</p></div><div class="sec"><div class="main"><div class="mn inl chg"><b class="lb">开发流程</b><p>开发必须遵守 <a href="dev-pr-workflow.html"><ins>《每个 PR 都要小：开发流程》（中文）</ins></a> 和 <a href="dev-pr-workflow.en.html"><ins>English</ins></a>：每个 PR 最多新增 300 行生产代码，只做一件事，base 是 master，标题写成 <code>type(scope): [n/N] summary</code>。</p><p>下面章节里的 6 个 PR 只是按功能划分的方向。实际要按该文档的方法再拆小，XRP 的拟拆分在该文档第 04 章，共 6 组 15 个 PR。</p></div></div><div class="margin"><div class="mn chg"><b class="lb">本次改动 #7</b>新增开发流程入口，两个语言版本的链接都在这里。来源：开发要求。</div></div><div class="main"><h2 id="work-1">建议的 PR</h2></div><div class="margin"></div><div class="wide"><div class="tw"><table class="t"><thead><tr><th>PR</th><th>内容</th><th>服务</th></tr></thead><tbody>
+<section class="chapter" id="work" data-rev="0"><div class="chap-h"><div class="eyebrow"></div><h1><span class="no">09</span>建议的开发拆分与测试方案</h1><p class="lede">仅供评审。本方案获批之前，这里的任何工作都不会开始。</p></div><div class="sec"><div class="main"><div class="mn inl"><b class="lb">开发流程</b><p>开发必须遵守 <a href="dev-pr-workflow.html">《每个 PR 都要小：开发流程》（中文）</a> 和 <a href="dev-pr-workflow.en.html">English</a>：每个 PR 最多新增 300 行生产代码，只做一件事，base 是 master，标题写成 <code>type(scope): [n/N] summary</code>。</p><p>下面章节里的 6 个 PR 只是按功能划分的方向。实际要按该文档的方法再拆小，XRP 的拟拆分在该文档第 04 章，共 6 组 15 个 PR。</p></div></div><div class="margin"></div><div class="main"><h2 id="work-1">建议的 PR</h2></div><div class="margin"></div><div class="wide"><div class="tw"><table class="t"><thead><tr><th>PR</th><th>内容</th><th>服务</th></tr></thead><tbody>
   <tr><td class="mono">1</td><td>保证金计算按计价资产分组、<code>isolated_only</code> 开关、下单资产校验</td><td>PM Perp</td></tr>
   <tr><td class="mono">2</td><td>保证金划转标志</td><td>PM Perp、PM Spot、trading-api</td></tr>
   <tr><td class="mono">3</td><td>quote 中的派生市场：合成价和资金费率</td><td>Quote</td></tr>
@@ -490,7 +511,7 @@ I    = 交叉市场取 0（Binance ETHBTC 取 0）；USDT 市场为每 8 小时 
 
 <script>
 (function(){
-  var B=document.body, REV=4, KEY='xrp-spec-lastSeen';
+  var B=document.body, REV=5, KEY='xrp-spec-lastSeen';
   var last=parseInt(localStorage.getItem(KEY)||'2',10);
   var secs=[].slice.call(document.querySelectorAll('.chapter.upd'));
   secs.forEach(function(s){ if(parseInt(s.dataset.rev,10)<=last) s.classList.remove('fresh'); else document.querySelector('.toc .g[data-c="'+s.id+'"]').classList.add('chg'); });
