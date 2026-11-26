@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f6f3e8">
+<title>XRP-quoted perps · delivery tracker</title>
+<style>
+:root{
+  --paper:#f6f3e8; --paper-light:#fcfaf2; --panel:#edf0e2;
+  --ink:#263d32; --muted:#647065; --line:#d9ddcf;
+  --green:#315b43; --sage:#dfe7d7; --orange:#db8958; --yellow:#e7bd64; --shadow:#ccd2bc;
+  --mono:"Pixel","Courier New",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --body:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+}
+@font-face{font-family:Pixel;src:url('pixel.ttf') format('truetype');font-weight:400 900;font-display:swap}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.75;-webkit-font-smoothing:antialiased}
+::selection{background:var(--yellow);color:var(--ink)}
+a{color:var(--green)}
+.section-wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+
+/* ── header / reading progress ─────────────────────── */
+.site-header{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1px solid var(--line)}
+.header-inner{max-width:1060px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+.brand{font-family:var(--mono);font-size:14px;letter-spacing:1px;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:10px}
+.brand-icon{width:12px;height:12px;background:var(--green);display:inline-block;box-shadow:2px 2px 0 var(--shadow)}
+.brand-suffix{color:var(--muted)}
+.desktop-nav{display:flex;gap:4px;flex-wrap:wrap}
+.desktop-nav a{font-family:var(--mono);font-size:12px;letter-spacing:.5px;color:var(--muted);text-decoration:none;padding:5px 10px;border:1px solid transparent}
+.desktop-nav a:hover{color:var(--ink);border-color:var(--line);background:var(--paper-light)}
+.reading-progress{position:absolute;left:0;bottom:-1px;height:2px;width:0;background:var(--orange);transition:width .1s linear}
+@media(max-width:760px){.desktop-nav{display:none}}
+
+/* ── hero ─────────────────────────────────── */
+.hero{padding:72px 0 56px;border-bottom:1px solid var(--line)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:16px}
+.hero h1{font-size:clamp(30px,4.6vw,52px);line-height:1.12;letter-spacing:-.5px;max-width:820px}
+.hero h1 .hl{background:var(--sage);padding:0 8px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.hero-meta{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:18px;letter-spacing:.5px}
+.hero-intro{max-width:720px;font-size:17.5px;color:var(--ink);margin-top:22px}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px}
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.5px;background:var(--sage);border:1px solid var(--line);padding:4px 10px;color:var(--green)}
+.tag.orange{background:#f7e5d8;color:#a15c33;border-color:#e6cdba}
+.hero-buttons{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+.button{font-family:var(--mono);font-size:13px;letter-spacing:1px;text-decoration:none;padding:12px 22px;border:1px solid var(--ink);background:var(--paper-light);color:var(--ink);box-shadow:3px 3px 0 var(--shadow);transition:transform .15s,box-shadow .15s}
+.button:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 var(--shadow)}
+.button.primary{background:var(--green);color:#faf7ec;border-color:var(--green)}
+
+/* ── impact-strip (KPI row) ──────────────────── */
+.impact-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));border:1px solid #cbd1bd;background:var(--panel);margin:44px 0 0}
+.impact-cell{padding:22px 26px;border-right:1px solid #cbd1bd}
+.impact-cell:last-child{border-right:none}
+.impact-number{font-family:var(--mono);font-size:30px;line-height:1;color:var(--green)}
+.impact-number.orange{color:var(--orange)}
+.impact-label{display:block;font-size:13px;color:var(--muted);margin-top:8px}
+@media(max-width:760px){.impact-cell{border-right:none;border-bottom:1px solid #cbd1bd}.impact-cell:last-child{border-bottom:none}}
+
+/* ── section skeleton ─────────────────────────── */
+section.doc-section{padding:64px 0;border-bottom:1px solid var(--line)}
+section.doc-section:last-of-type{border-bottom:none}
+.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:18px;margin-bottom:34px}
+.section-kicker{font-family:var(--mono);font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--orange)}
+.section-heading h2{font-size:clamp(22px,3vw,30px);letter-spacing:-.3px;margin-top:8px}
+.section-aside{font-family:var(--mono);font-size:22px;color:var(--line);flex:none}
+@media(max-width:760px){.section-heading{flex-direction:column;gap:6px}}
+
+/* ── body copy / lists ─────────────────────────── */
+.doc-copy{max-width:780px}
+.doc-copy p{margin-bottom:16px}
+.doc-copy p.large-copy{font-size:19px;line-height:1.65}
+.doc-copy ul,.doc-copy ol{padding-left:22px;margin-bottom:16px}
+.doc-copy li{margin-bottom:8px}
+.doc-copy strong{background:var(--sage);padding:0 4px}
+.doc-copy code{font-family:var(--mono);font-size:.86em;background:var(--paper-light);border:1px solid var(--line);padding:1px 6px}
+.mini-toc{border:1px solid var(--line);background:var(--paper-light);padding:18px 24px;margin-bottom:22px;max-width:520px}
+.mini-toc-title{font-family:var(--mono);font-size:11px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.mini-toc a{display:block;text-decoration:none;font-size:14px;padding:3px 0;color:var(--ink)}
+.mini-toc a:hover{color:var(--orange)}
+
+/* ── card-grid ───────────────────────────── */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+.card{background:var(--paper-light);border:1px solid #c8d0b9;padding:22px 20px;position:relative;transition:transform .2s,box-shadow .2s}
+.card:hover{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--shadow)}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.card-index{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.card h3{font-size:17px;margin-bottom:8px}
+.card p{font-size:14px;color:var(--muted)}
+.card-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.card-footer{display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:12px;border-top:1px dashed var(--line);font-family:var(--mono);font-size:11px;color:var(--muted)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block}
+.status-dot.warn{background:var(--orange)}
+.status-dot.bad{background:#b34a3a}
+
+/* ── timeline ─────────────── */
+.quest-list{border-top:1px solid #bcc7ad}
+details.quest{border-bottom:1px solid #bcc7ad;background:var(--paper-light)}
+details.quest[open]{background:var(--paper-light)}
+.quest-head{display:grid;grid-template-columns:52px 92px 1fr 28px;gap:14px;align-items:center;padding:16px 18px;cursor:pointer;list-style:none}
+.quest-head::-webkit-details-marker{display:none}
+.quest-index{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.quest-type{font-family:var(--mono);font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#faf7ec;background:var(--green);padding:3px 0;text-align:center}
+.quest-type.warn{background:var(--orange)}
+.quest-type.bad{background:#b34a3a}
+.quest-head h3{font-size:15.5px;font-weight:600}
+.quest-expand{font-family:var(--mono);color:var(--muted)}
+details.quest[open] .quest-expand::before{content:"-"}
+.quest-content{padding:4px 18px 22px 66px;font-size:14.5px;color:var(--ink)}
+.quest-content p{margin-bottom:12px}
+.quest-note{font-family:var(--mono);font-size:12px;color:var(--muted);border-left:3px solid var(--yellow);padding:8px 14px;background:var(--paper);margin:14px 0}
+@media(max-width:640px){.quest-head{grid-template-columns:44px 1fr 24px}.quest-type{display:none}.quest-content{padding-left:18px}}
+
+/* ── tables ────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;border:1px solid #cbd1bd;background:var(--paper-light);margin-bottom:22px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+thead th{font-family:var(--mono);font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--green);text-align:left;background:var(--panel);border-bottom:1px solid #cbd1bd;padding:11px 16px;white-space:nowrap}
+tbody td{padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:nth-child(even){background:#f3f0e4}
+td code{white-space:nowrap}
+
+/* ── code blocks ──────────────────────────────── */
+pre.code{font-family:var(--mono);font-size:13px;line-height:1.7;background:var(--paper-light);border:1px solid #c8d0b9;border-left:4px solid var(--green);padding:18px 22px;overflow-x:auto;margin-bottom:22px}
+pre.code .cm{color:var(--muted)}
+pre.code .bad{color:#b34a3a}
+pre.code .ok{color:var(--green)}
+.code-title{font-family:var(--mono);font-size:11px;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:-14px;position:relative;top:-8px}
+
+/* ── callout ─────────────────────────────── */
+.callout{display:flex;gap:14px;border:1px solid #c8d0b9;background:var(--paper-light);padding:16px 20px;margin-bottom:22px;max-width:860px}
+.callout-icon{font-family:var(--mono);font-size:12px;flex:none;padding:2px 8px;height:fit-content}
+.callout.note{border-left:4px solid var(--green)}  .callout.note .callout-icon{background:var(--sage);color:var(--green)}
+.callout.warn{border-left:4px solid var(--orange)}   .callout.warn .callout-icon{background:#f7e5d8;color:#a15c33}
+.callout.alarm{border-left:4px solid #b34a3a}        .callout.alarm .callout-icon{background:#f3dbd6;color:#8f3629}
+.callout p{font-size:14.5px}
+.callout p+p{margin-top:8px}
+
+/* ── footer ──────────────────────────────── */
+.site-footer{border-top:1px solid var(--line);padding:34px 0;background:var(--panel)}
+.footer-inner{max-width:1060px;margin:0 auto;padding:0 28px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+.footer-meta{font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--muted)}
+.back-top{font-family:var(--mono);font-size:12px;letter-spacing:1px;color:var(--ink);text-decoration:none;border:1px solid var(--ink);padding:8px 16px;background:var(--paper-light);box-shadow:3px 3px 0 var(--shadow)}
+.back-top:hover{transform:translate(-1px,-1px)}
+@media print{
+  .site-header,.hero-buttons,.back-top,.reading-progress{display:none!important}
+  body{background:#fff}
+  section.doc-section{padding:20px 0}
+}
+
+/* ── delivery status (tokens from the template) ── */
+.quest-type.now{background:var(--orange)}
+.quest-type.next{background:var(--muted)}
+.quest-type.decide{background:var(--yellow);color:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 22px}
+.legend .quest-type{display:inline-block;width:78px}
+.legend span.lg{font-size:13px;color:var(--muted);margin-right:14px}
+.quest-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px}
+.phase-bar{height:8px;background:var(--panel);border:1px solid #cbd1bd;margin:10px 0 26px;max-width:520px}
+.phase-bar i{display:block;height:100%;background:var(--green)}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="brand" href="#main"><span class="brand-icon"></span>YELLOW / XRP PERPS<span class="brand-suffix">· rev 1</span></a>
+    <nav class="desktop-nav"><a href="#s0">P0</a><a href="#s1">P1</a><a href="#s2">P2</a><a href="#s3">P3</a><a href="#s4">P4</a><a href="#log">LOG</a><a href="xrp-quoted-perps-investigation.en.html">SPEC</a><a href="xrp-perps-delivery.html">中文</a></nav>
+  </div>
+  <div class="reading-progress" id="progress"></div>
+</header>
+<main id="main">
+<section class="hero section-wrap">
+  <div class="eyebrow">● XRP-quoted perps · delivery · live</div>
+  <h1>BTCXRP / ETHXRP<br><span class="hl">delivery tracker</span></h1>
+  <div class="hero-meta">Updated 2026-11-26 · rev 1 · owner Leo · source of truth for status</div>
+  <p class="hero-intro"><strong>Current phase: development.</strong> 3 of our 12 PRs are open for review (funding), none merged. Yehor's settlement-assets design has 4 PRs in review (Joker), mergeable. <strong>Next:</strong> review and merge #1900, #1898, #1899; start PR 1 and PR 2. <strong>Blocking launch:</strong> pool routing per settlement asset (A5, A6) and 5 open decisions (D5&ndash;D9).</p>
+  <div class="hero-tags"><span class="tag">XRP perps</span><span class="tag">B-Book</span><span class="tag orange">Development</span></div>
+  <div class="hero-buttons">
+    <a class="button primary" href="xrp-quoted-perps-investigation.en.html">Design spec (v9)</a>
+    <a class="button" href="https://ljpsn5lrmffy.jp.larksuite.com/wiki/XqptwR6v8iRTTZkNIwyjm2kzpyc?table=tblNegIS8ZlllJJ7">Lark task board</a>
+    <a class="button" href="xrp-perps-delivery.html">中文</a>
+  </div>
+  <div class="impact-strip"><div class="impact-cell"><span class="impact-number">3 / 12</span><span class="impact-label">our PRs opened</span></div><div class="impact-cell"><span class="impact-number orange">0</span><span class="impact-label">our PRs merged</span></div><div class="impact-cell"><span class="impact-number">4 / 4</span><span class="impact-label">Yehor's design PRs in review</span></div><div class="impact-cell"><span class="impact-number orange">5</span><span class="impact-label">decisions open</span></div></div>
+</section>
+<section class="doc-section section-wrap" id="legend">
+  <div class="section-heading"><div><div class="section-kicker">Legend</div><h2>Status</h2></div><div class="section-aside">&middot;</div></div>
+  <div class="legend"><span class="quest-type">DONE</span><span class="lg">finished or decided</span><span class="quest-type now">NOW</span><span class="lg">in progress or in review</span><span class="quest-type next">NEXT</span><span class="lg">not started</span><span class="quest-type bad">BLOCKED</span><span class="lg">waiting on another item</span><span class="quest-type decide">DECIDE</span><span class="lg">needs a decision</span></div>
+  <div class="callout note"><span class="callout-icon">RULE</span><p>Updated with every status change, together with the Lark board. A step marked NOW is never left after it has finished.</p></div>
+</section>
+<section class="doc-section section-wrap" id="s0"><div class="section-heading"><div><div class="section-kicker">Phase 0</div><h2>Decisions</h2></div><div class="section-aside">00</div></div><div class="phase-bar"><i style="width:44%"></i></div><div class="quest-meta">4 / 9 done</div><div class="quest-list">
+<details class="quest"><summary class="quest-head"><span class="quest-index">D1</span><span class="quest-type">DONE</span><h3>Index = mark = our own last traded price</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Requester</div><p>Decided 2026-11-25. No external reference; our market maker keeps the price close to BTCUSDT / XRPUSDT (spec 05a-3, 05c).</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">D2</span><span class="quest-type">DONE</span><h3>Funding option B: leg difference</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Requester, MM</div><p>Decided 2026-11-26: f(BTCUSDT) &minus; f(XRPUSDT), ETHUSDT for ETHXRP, normalised to 8 h (spec 05a-4).</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">D3</span><span class="quest-type">DONE</span><h3>Bootstrap price set by us at launch</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Decided 2026-11-26. A shell script in PR 10 computes it from the BTCUSDT / XRPUSDT and ETHUSDT / XRPUSDT marks; the first fill is a limit order by the market maker or us within 0.9&ndash;1.1 &times; (05c-4).</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">D4</span><span class="quest-type">DONE</span><h3>Restart recovery reads the last mark from PM Perp</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Decided 2026-11-26; implemented in PR 2. Prevents a quiet market from locking up after a quote restart (05c-4).</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">D5</span><span class="quest-type decide">DECIDE</span><h3>Funding cap &plusmn;0.675% per 8 h</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Risk</div><p>Sum of the two leg caps. PM Perp drops any rate above <code>max_funding_rate_per_int</code> (default 0.3%).</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">D6</span><span class="quest-type decide">DECIDE</span><h3>Funding imbalance: alert owner and booking</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Yehor</div><p>Spec question 10. Until the clearing account exists (PR 13), a non-zero difference is only measured (PR 12).</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">D7</span><span class="quest-type decide">DECIDE</span><h3>Pools: option A or option B</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Yehor, Risk</div><p>Spec question 2: XRP rows in the existing pool accounts (A, recommended) or dedicated XRP accounts (B).</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">D8</span><span class="quest-type decide">DECIDE</span><h3>Liquidation executions and the mark</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Requester, Yehor</div><p>Spec question 11. Liquidation IOC fills and synthetic takeover / ADL trades reach the mark source. Recommended: ignore non-<code>trade</code> executions in PR 1; IOC fills: filter or accept.</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">D9</span><span class="quest-type decide">DECIDE</span><h3>Risk values: open-interest cap, settlement-pool threshold, gap alert</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Risk</div><p>Spec questions 5 and 9. Suggested values are in spec 05a-1.</p></div></details>
+</div></section>
+<section class="doc-section section-wrap" id="s1"><div class="section-heading"><div><div class="section-kicker">Phase 1</div><h2>Yehor's multiple-settlement-assets design (Joker)</h2></div><div class="section-aside">01</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 6 done</div><div class="quest-list">
+<details class="quest" open><summary class="quest-head"><span class="quest-index">A1</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1889">#1889</a> Quote-asset-only margin</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker</div><p>In review, round 3: mergeable, no open items.</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">A2</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1890">#1890</a> Transfer policy on <code>perps_assets</code></h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker, DevOps</div><p>In review, mergeable. Before deploying trading-api: check that USDT decimals match between spot and perp in each environment (F5). Later: <code>transfer_only</code> not enforced yet (F7); amount precision (F8).</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">A3</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1891">#1891</a> Account summaries per settlement asset</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker</div><p>In review, mergeable. Before any XRP-quoted market: F15 (XRP-only totals read as USD) and F16.</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">A4</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1892">#1892</a> One settlement asset per cross account</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker</div><p>In review, mergeable. Before any XRP-quoted market: F14 (isolated orders counted) and F15; F12 when per-asset locks are enabled.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">A5</span><span class="quest-type next">NEXT</span><h3>Pool routing per settlement asset, no USDT fallback</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker</div><p><code>insurance/fund.go:302-307</code>. A missing pool for an asset must block, not fall back. Not started.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">A6</span><span class="quest-type next">NEXT</span><h3>Cross-liquidation pool choice per settlement asset</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker</div><p>Not started. Safe today because #1892 keeps one settlement asset per cross account.</p></div></details>
+</div></section>
+<section class="doc-section section-wrap" id="s2"><div class="section-heading"><div><div class="section-kicker">Phase 2</div><h2>Our pull requests (spec chapter 09)</h2></div><div class="section-aside">02</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 13 done</div><div class="quest-list">
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 1</span><span class="quest-type next">NEXT</span><h3>Quote internal last-price mode</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>NORMAL from own fills, hold the price during silence, index = mark; ignore non-<code>trade</code> executions if D8 agrees. Depends on: none.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 2</span><span class="quest-type next">NEXT</span><h3>Bootstrap price, restart recovery, <code>parseSymbolToMarket</code></h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Restart reads the last mark from PM Perp (D4). Depends on: PR 1.</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">PR 3</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1900">#1900</a> Leg-difference funding in quote</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>In review. Publishes nothing until PR 1 and PR 2 give the market its own mark.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 4</span><span class="quest-type next">NEXT</span><h3>USD value of fee and volume at trade time</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Depends on: none.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 5</span><span class="quest-type next">NEXT</span><h3>Asset field on events; analytics funding and equity</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Depends on: none.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 6</span><span class="quest-type next">NEXT</span><h3>Referral and fee-engine conversion</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Depends on: none.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 7</span><span class="quest-type next">NEXT</span><h3>Pool catalogue by (pool, asset); reporting APIs per asset</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Depends on: none.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 8</span><span class="quest-type next">NEXT</span><h3>Per-market open-interest cap</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Reduce-only above the cap. Depends on: none.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 9</span><span class="quest-type next">NEXT</span><h3>Negative settlement-pool alert and automatic reduce-only</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Plus the zero-insurance runbook. Depends on: PR 8.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">PR 10</span><span class="quest-type next">NEXT</span><h3>Launch config and bootstrap shell script</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>XRP <code>settlement_state</code>, two markets, risk tiers, quote config, bootstrap prices. Depends on: PRs 1&ndash;9, 11, 12 and phase 1.</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">PR 11</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1898">#1898</a> Skip an interval when the funding rate is stale</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>In review. Behaviour change for all markets, USDT included: notify Joker and Yehor before merge. Alert added; skipped intervals are not settled later.</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">PR 12</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1899">#1899</a> Funding imbalance metric and alert</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>In review. Alert only for markets settled within the last hour, tolerance 1e-6. Rebase after whichever of #1898 / #1899 merges first.</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">PR 13</span><span class="quest-type bad">BLOCKED</span><h3>Funding through a per-asset clearing account</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Deferred until A5 (pool routing per settlement asset) is merged.</p></div></details>
+</div></section>
+<section class="doc-section section-wrap" id="s3"><div class="section-heading"><div><div class="section-kicker">Phase 3</div><h2>Launch</h2></div><div class="section-aside">03</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 6 done</div><div class="quest-list">
+<details class="quest"><summary class="quest-head"><span class="quest-index">L1</span><span class="quest-type next">NEXT</span><h3>Settlement-assets design steps 1&ndash;6</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker, us</div><p>XRP starts as <code>transfer_only</code>; verify the spot &rarr; perp &rarr; spot round trip.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">L2</span><span class="quest-type next">NEXT</span><h3>Create the markets FROZEN and INVISIBLE</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Run the bootstrap shell script; check that bootstrap mark/index events and the funding fields are published.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">L3</span><span class="quest-type next">NEXT</span><h3>Release gates of the settlement-assets design (&sect;12)</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker, us</div><p>USDT and XRP cross positions in one account do not affect each other; XRP liquidation uses XRP pools only.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">L4</span><span class="quest-type next">NEXT</span><h3>Unfreeze for the market maker only; first fill</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: MM, us</div><p>Market stays INVISIBLE. First fill: a limit order by the market maker or us within 0.9&ndash;1.1 &times; the bootstrap price.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">L5</span><span class="quest-type next">NEXT</span><h3>Drills</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us, QA</div><p>One funding settlement, one isolated liquidation, one XRP cross liquidation; check pool balances and alerts.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">L6</span><span class="quest-type next">NEXT</span><h3>Open to users</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Requester</div><p>One market first; the second after a period of observation.</p></div></details>
+</div></section>
+<section class="doc-section section-wrap" id="s4"><div class="section-heading"><div><div class="section-kicker">Phase 4</div><h2>After launch</h2></div><div class="section-aside">04</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 3 done</div><div class="quest-list">
+<details class="quest"><summary class="quest-head"><span class="quest-index">W1</span><span class="quest-type next">NEXT</span><h3>Watch the alerts</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Ops</div><p>Funding imbalance, funding interval skipped, BTCXRP gap against BTCUSDT / XRPUSDT, negative XRP settlement-pool row.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">W2</span><span class="quest-type next">NEXT</span><h3>XRP settlement-pool top-up</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Finance</div><p>Spec question 3: who tops up a negative XRP balance, and how often.</p></div></details>
+<details class="quest"><summary class="quest-head"><span class="quest-index">W3</span><span class="quest-type next">NEXT</span><h3>Phase 2 items</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Clearing account (PR 13), premium-based funding and an external price reference once the book has depth.</p></div></details>
+</div></section>
+<section class="doc-section section-wrap" id="log">
+  <div class="section-heading"><div><div class="section-kicker">Change log</div><h2>Change log</h2></div><div class="section-aside">&middot;</div></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Rev</th><th>Date</th><th>Change</th></tr></thead><tbody><tr><td>rev 1</td><td>2026-11-26</td><td>Page created from spec v9, the Lark board and the live PR states.</td></tr></tbody></table></div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span class="footer-meta">Yellow · XRP-quoted perps · delivery tracker · rev 1 · 2026-11-26</span>
+    <a class="back-top" href="#main">&uarr; BACK TO TOP</a>
+  </div>
+</footer>
+<script>
+// reading progress bar
+const bar=document.getElementById('progress');
+addEventListener('scroll',()=>{
+  const h=document.documentElement;
+  bar.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%';
+},{passive:true});
+</script>
+</body>
+</html>
