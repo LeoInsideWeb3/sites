@@ -158,13 +158,39 @@ pre.code .ok{color:var(--green)}
 .quest-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px}
 .phase-bar{height:8px;background:var(--panel);border:1px solid #cbd1bd;margin:10px 0 26px;max-width:520px}
 .phase-bar i{display:block;height:100%;background:var(--green)}
+
+/* ── overall timeline (rev 2) ── */
+.ms-track{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;margin:8px 0 18px;position:relative}
+.ms{position:relative;padding:30px 10px 0 0}
+.ms::before{content:"";position:absolute;top:9px;left:0;right:0;height:2px;background:#bcc7ad}
+.ms::after{content:"";position:absolute;top:3px;left:0;width:14px;height:14px;border:2px solid var(--muted);background:var(--paper)}
+.ms.done::after{background:var(--green);border-color:var(--green)}
+.ms.now::after{background:var(--orange);border-color:var(--orange)}
+.ms.done::before{background:var(--green)}
+.ms .quest-type{display:inline-block;width:70px;margin-bottom:8px}
+.ms-id{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.ms h4{font-size:13.5px;line-height:1.35;margin:2px 0 6px}
+.ms-date{font-family:var(--mono);font-size:11px;color:var(--ink)}
+.ms-owner{font-size:12px;color:var(--muted);line-height:1.4}
+.ms.crit h4{background:#f7e5d8;padding:0 4px}
+@media(max-width:900px){
+  .ms-track{grid-template-columns:1fr;border-left:2px solid #bcc7ad;margin-left:6px}
+  .ms{padding:0 0 18px 22px}
+  .ms::before{display:none}
+  .ms::after{top:4px;left:-8px}
+}
+.overall{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:6px 0 22px}
+.overall .impact-number{font-size:40px}
+.overall .phase-bar{flex:1;min-width:220px;margin:0;height:14px;max-width:none}
+.ws-bar{height:8px;background:var(--panel);border:1px solid #cbd1bd;min-width:110px}
+.ws-bar i{display:block;height:100%;background:var(--green)}
 </style>
 </head>
 <body>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#main"><span class="brand-icon"></span>YELLOW / XRP PERPS<span class="brand-suffix">· rev 1</span></a>
-    <nav class="desktop-nav"><a href="#s0">P0</a><a href="#s1">P1</a><a href="#s2">P2</a><a href="#s3">P3</a><a href="#s4">P4</a><a href="#log">LOG</a><a href="xrp-quoted-perps-investigation.html">SPEC</a><a href="xrp-perps-delivery.en.html">English</a></nav>
+    <a class="brand" href="#main"><span class="brand-icon"></span>YELLOW / XRP PERPS<span class="brand-suffix">· rev 2</span></a>
+    <nav class="desktop-nav"><a href="#overview">ALL</a><a href="#s0">P0</a><a href="#s1">P1</a><a href="#s2">P2</a><a href="#s2b">P2B</a><a href="#s3">P3</a><a href="#s4">P4</a><a href="#log">LOG</a><a href="xrp-quoted-perps-investigation.html">SPEC</a><a href="xrp-perps-delivery.en.html">English</a></nav>
   </div>
   <div class="reading-progress" id="progress"></div>
 </header>
@@ -172,7 +198,7 @@ pre.code .ok{color:var(--green)}
 <section class="hero section-wrap">
   <div class="eyebrow">● XRP 计价永续 · 交付 · 实时</div>
   <h1>BTCXRP / ETHXRP<br><span class="hl">交付进度</span></h1>
-  <div class="hero-meta">更新于 2026-11-26 · rev 1 · 负责人 Leo · 状态以本页为准</div>
+  <div class="hero-meta">更新于 2026-11-26 · rev 2 · 负责人 Leo · 状态以本页为准</div>
   <p class="hero-intro"><strong>当前阶段：开发。</strong>我们的 12 个 PR 中已有 3 个（资金费）在评审，尚无合并。Yehor 的多结算资产设计有 4 个 PR 在评审（Joker），都可以合并。<strong>下一步：</strong>评审并合并 #1900、#1898、#1899；开始 PR 1 和 PR 2。<strong>阻塞上线：</strong>资金池按结算资产路由（A5、A6），以及 5 项待决（D5&ndash;D9）。</p>
   <div class="hero-tags"><span class="tag">XRP 永续</span><span class="tag">B-Book</span><span class="tag orange">开发中</span></div>
   <div class="hero-buttons">
@@ -180,7 +206,14 @@ pre.code .ok{color:var(--green)}
     <a class="button" href="https://ljpsn5lrmffy.jp.larksuite.com/wiki/XqptwR6v8iRTTZkNIwyjm2kzpyc?table=tblNegIS8ZlllJJ7">飞书任务看板</a>
     <a class="button" href="xrp-perps-delivery.en.html">English</a>
   </div>
-  <div class="impact-strip"><div class="impact-cell"><span class="impact-number">3 / 12</span><span class="impact-label">我们的 PR 已提交</span></div><div class="impact-cell"><span class="impact-number orange">0</span><span class="impact-label">我们的 PR 已合并</span></div><div class="impact-cell"><span class="impact-number">4 / 4</span><span class="impact-label">Yehor 设计的 PR 在评审</span></div><div class="impact-cell"><span class="impact-number orange">5</span><span class="impact-label">待决事项</span></div></div>
+  <div class="impact-strip"><div class="impact-cell"><span class="impact-number">3 / 12</span><span class="impact-label">我们的 PR 已提交</span></div><div class="impact-cell"><span class="impact-number orange">0</span><span class="impact-label">我们的 PR 已合并</span></div><div class="impact-cell"><span class="impact-number">4 / 4</span><span class="impact-label">Yehor 设计的 PR 在评审</span></div><div class="impact-cell"><span class="impact-number orange">5</span><span class="impact-label">待决事项</span></div><div class="impact-cell"><span class="impact-number">11%</span><span class="impact-label">总完成度（4 / 36）</span></div></div>
+</section>
+<section class="doc-section section-wrap" id="overview"><div class="section-heading"><div><div class="section-kicker">Overall</div><h2>总时间线</h2></div><div class="section-aside">ALL</div></div>
+<div class="overall"><span class="impact-number">11%</span><div class="phase-bar"><i style="width:11%"></i></div><span class="quest-meta">4 / 36 项完成（阶段 0–3 加前端/MM/文档；不含上线后和 PR 13）</span></div>
+<div class="ms-track"><div class="ms done"><span class="quest-type">DONE</span><div class="ms-id">M0</div><h4>设计方案定稿（文档 v9）</h4><div class="ms-date">2026-11-26 </div><div class="ms-owner">Leo、Yehor</div></div><div class="ms now"><span class="quest-type now">NOW</span><div class="ms-id">M1</div><h4>决策全部关闭（D1–D9），前端/MM/文档定负责人</h4><div class="ms-date">2026-11-28 （预估）</div><div class="ms-owner">需求方、Yehor、风控</div></div><div class="ms now crit"><span class="quest-type now">NOW</span><div class="ms-id">M2</div><h4>Yehor 的多结算资产设计合并（含 XRP 前修复、按资产的资金池路由）</h4><div class="ms-date">2026-12-05 （预估）</div><div class="ms-owner">Joker</div></div><div class="ms now"><span class="quest-type now">NOW</span><div class="ms-id">M3</div><h4>我们的 PR 1–12 合并（3 个在评审）</h4><div class="ms-date">2026-12-10 （预估）</div><div class="ms-owner">Leo / Claude</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M4</div><h4>前端、做市商对接、对外文档就绪</h4><div class="ms-date">2026-12-10 （预估）</div><div class="ms-owner">待定</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M5</div><h4>隐藏开市：建市场、启动价、MM 第一笔成交（L1–L4）</h4><div class="ms-date">2026-12-12 （预估）</div><div class="ms-owner">Leo、Joker、做市商</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M6</div><h4>演练通过（L5）</h4><div class="ms-date">2026-12-15 （预估）</div><div class="ms-owner">Leo、QA</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M7</div><h4>对用户开放（L6）</h4><div class="ms-date">2026-12-17 （预估）</div><div class="ms-owner">需求方</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">+</div><h4>上线后：盯告警（P4），PR 13 延后</h4><div class="ms-date">— </div><div class="ms-owner">运维、Leo</div></div></div>
+<div class="callout warn"><span class="callout-icon">NOTE</span><p>日期是预估：代码由 AI 编写，进度主要取决于评审、集成和演练。<strong>关键路径是 M2</strong>（Yehor 的多结算资产设计，含按资产的资金池路由）：它不完成，就不能开市。</p></div>
+<div class="tbl-wrap"><table><thead><tr><th>工作流</th><th>负责方</th><th>完成</th><th>进行中</th><th>阻塞 / 待决</th><th>进度</th></tr></thead><tbody><tr><td><a href="#s0">决策</a></td><td>需求方、Yehor、风控</td><td>4 / 9</td><td>0</td><td>5 待决</td><td><div class="ws-bar"><i style="width:44%"></i></div></td></tr><tr><td><a href="#s1">Yehor 的设计（Joker）</a></td><td>Joker</td><td>0 / 6</td><td>4</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2">我们的 PR 1–12</a></td><td>Leo / Claude</td><td>0 / 12</td><td>3</td><td>0（PR 13 延后）</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2b">前端</a></td><td>待定</td><td>0 / 1</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2b">做市商对接</a></td><td>待定</td><td>0 / 1</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2b">对外文档</a></td><td>待定</td><td>0 / 1</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s3">上线</a></td><td>Leo、Joker、做市商、QA</td><td>0 / 6</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s4">上线后（不计入总进度）</a></td><td>运维、财务、Leo</td><td>0 / 3</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr></tbody></table></div>
+<div class="callout note"><span class="callout-icon">NEXT</span><div><p><strong>下一步：</strong>评审并合并 #1900、#1898、#1899；开始 PR 1、PR 2；需求方、Yehor、风控关闭 D5–D9，并确定前端、做市商、文档的负责人。</p><p><strong>关键路径 / 阻塞：</strong>M2（A5、A6 尚未开始）；5 项待决（D5–D9）；前端、做市商、文档没有负责人。</p></div></div>
 </section>
 <section class="doc-section section-wrap" id="legend">
   <div class="section-heading"><div><div class="section-kicker">Legend</div><h2>状态</h2></div><div class="section-aside">&middot;</div></div>
@@ -221,6 +254,11 @@ pre.code .ok{color:var(--green)}
 <details class="quest" open><summary class="quest-head"><span class="quest-index">PR 12</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1899">#1899</a> 资金费轧差指标和告警</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">负责方: 我们</div><p>评审中。告警只看最近 1 小时内结算过的市场，容差 1e-6。#1898、#1899 后合并的那个需要 rebase。</p></div></details>
 <details class="quest" open><summary class="quest-head"><span class="quest-index">PR 13</span><span class="quest-type bad">BLOCKED</span><h3>资金费走按资产的清算账户</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">负责方: 我们</div><p>延后，等 A5（资金池按结算资产路由）合并。</p></div></details>
 </div></section>
+<section class="doc-section section-wrap" id="s2b"><div class="section-heading"><div><div class="section-kicker">阶段 2b</div><h2>不在我们 PR 范围内的工作</h2></div><div class="section-aside">2B</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 3 完成 · 设计文档明确不含前端和做市商工作</div><div class="quest-list">
+<details class="quest" open><summary class="quest-head"><span class="quest-index">F1</span><span class="quest-type next">NEXT</span><h3>前端</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">负责方：待定</div><p>按 XRP 显示保证金、盈亏和手续费；XRP 划入/划出合约账户的界面；资金费规则说明（两条腿费率之差，与本市场盘口无关）。</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">F2</span><span class="quest-type next">NEXT</span><h3>做市商对接</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">负责方：待定</div><p>在 BTCXRP / ETHXRP 挂单报价；用 BTCUSDT / XRPUSDT（ETHUSDT）对冲，名义金额相等；确认接受资金费方案 B；上线时完成第一笔限价成交（L4）。</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">F3</span><span class="quest-type next">NEXT</span><h3>对外文档</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">负责方：待定</div><p>API 文档（XRP 计价市场、资产字段）；产品 FAQ：资金费公式、标记价 = 本市场最新成交价、风险提示。</p></div></details>
+</div></section>
 <section class="doc-section section-wrap" id="s3"><div class="section-heading"><div><div class="section-kicker">阶段 3</div><h2>上线</h2></div><div class="section-aside">03</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 6 完成</div><div class="quest-list">
 <details class="quest"><summary class="quest-head"><span class="quest-index">L1</span><span class="quest-type next">NEXT</span><h3>多结算资产设计步骤 1&ndash;6</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">负责方: Joker、我们</div><p>XRP 先设为 <code>transfer_only</code>，验证现货 &rarr; 合约 &rarr; 现货往返。</p></div></details>
 <details class="quest"><summary class="quest-head"><span class="quest-index">L2</span><span class="quest-type next">NEXT</span><h3>以 FROZEN + INVISIBLE 创建市场</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">负责方: 我们</div><p>运行启动价脚本；确认启动价的标记价/指数价事件和资金费字段正常发布。</p></div></details>
@@ -236,12 +274,12 @@ pre.code .ok{color:var(--green)}
 </div></section>
 <section class="doc-section section-wrap" id="log">
   <div class="section-heading"><div><div class="section-kicker">Change log</div><h2>更新记录</h2></div><div class="section-aside">&middot;</div></div>
-  <div class="tbl-wrap"><table><thead><tr><th>Rev</th><th>Date</th><th>Change</th></tr></thead><tbody><tr><td>rev 1</td><td>2026-11-26</td><td>根据设计文档 v9、飞书看板和 PR 实时状态创建本页。</td></tr></tbody></table></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Rev</th><th>Date</th><th>Change</th></tr></thead><tbody><tr><td>rev 1</td><td>2026-11-26</td><td>根据设计文档 v9、飞书看板和 PR 实时状态创建本页。</td></tr><tr><td>rev 2</td><td>2026-11-26</td><td>新增总时间线（M0–M7）、按工作流的进度表和总完成度；新增阶段 2b：前端、做市商对接、对外文档。</td></tr></tbody></table></div>
 </section>
 </main>
 <footer class="site-footer">
   <div class="footer-inner">
-    <span class="footer-meta">Yellow · XRP 计价永续 · 交付进度 · rev 1 · 2026-11-26</span>
+    <span class="footer-meta">Yellow · XRP 计价永续 · 交付进度 · rev 2 · 2026-11-26</span>
     <a class="back-top" href="#main">&uarr; BACK TO TOP</a>
   </div>
 </footer>

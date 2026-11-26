@@ -158,13 +158,39 @@ pre.code .ok{color:var(--green)}
 .quest-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:10px}
 .phase-bar{height:8px;background:var(--panel);border:1px solid #cbd1bd;margin:10px 0 26px;max-width:520px}
 .phase-bar i{display:block;height:100%;background:var(--green)}
+
+/* ── overall timeline (rev 2) ── */
+.ms-track{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:0;margin:8px 0 18px;position:relative}
+.ms{position:relative;padding:30px 10px 0 0}
+.ms::before{content:"";position:absolute;top:9px;left:0;right:0;height:2px;background:#bcc7ad}
+.ms::after{content:"";position:absolute;top:3px;left:0;width:14px;height:14px;border:2px solid var(--muted);background:var(--paper)}
+.ms.done::after{background:var(--green);border-color:var(--green)}
+.ms.now::after{background:var(--orange);border-color:var(--orange)}
+.ms.done::before{background:var(--green)}
+.ms .quest-type{display:inline-block;width:70px;margin-bottom:8px}
+.ms-id{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.ms h4{font-size:13.5px;line-height:1.35;margin:2px 0 6px}
+.ms-date{font-family:var(--mono);font-size:11px;color:var(--ink)}
+.ms-owner{font-size:12px;color:var(--muted);line-height:1.4}
+.ms.crit h4{background:#f7e5d8;padding:0 4px}
+@media(max-width:900px){
+  .ms-track{grid-template-columns:1fr;border-left:2px solid #bcc7ad;margin-left:6px}
+  .ms{padding:0 0 18px 22px}
+  .ms::before{display:none}
+  .ms::after{top:4px;left:-8px}
+}
+.overall{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:6px 0 22px}
+.overall .impact-number{font-size:40px}
+.overall .phase-bar{flex:1;min-width:220px;margin:0;height:14px;max-width:none}
+.ws-bar{height:8px;background:var(--panel);border:1px solid #cbd1bd;min-width:110px}
+.ws-bar i{display:block;height:100%;background:var(--green)}
 </style>
 </head>
 <body>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#main"><span class="brand-icon"></span>YELLOW / XRP PERPS<span class="brand-suffix">· rev 1</span></a>
-    <nav class="desktop-nav"><a href="#s0">P0</a><a href="#s1">P1</a><a href="#s2">P2</a><a href="#s3">P3</a><a href="#s4">P4</a><a href="#log">LOG</a><a href="xrp-quoted-perps-investigation.en.html">SPEC</a><a href="xrp-perps-delivery.html">中文</a></nav>
+    <a class="brand" href="#main"><span class="brand-icon"></span>YELLOW / XRP PERPS<span class="brand-suffix">· rev 2</span></a>
+    <nav class="desktop-nav"><a href="#overview">ALL</a><a href="#s0">P0</a><a href="#s1">P1</a><a href="#s2">P2</a><a href="#s2b">P2B</a><a href="#s3">P3</a><a href="#s4">P4</a><a href="#log">LOG</a><a href="xrp-quoted-perps-investigation.en.html">SPEC</a><a href="xrp-perps-delivery.html">中文</a></nav>
   </div>
   <div class="reading-progress" id="progress"></div>
 </header>
@@ -172,7 +198,7 @@ pre.code .ok{color:var(--green)}
 <section class="hero section-wrap">
   <div class="eyebrow">● XRP-quoted perps · delivery · live</div>
   <h1>BTCXRP / ETHXRP<br><span class="hl">delivery tracker</span></h1>
-  <div class="hero-meta">Updated 2026-11-26 · rev 1 · owner Leo · source of truth for status</div>
+  <div class="hero-meta">Updated 2026-11-26 · rev 2 · owner Leo · source of truth for status</div>
   <p class="hero-intro"><strong>Current phase: development.</strong> 3 of our 12 PRs are open for review (funding), none merged. Yehor's settlement-assets design has 4 PRs in review (Joker), mergeable. <strong>Next:</strong> review and merge #1900, #1898, #1899; start PR 1 and PR 2. <strong>Blocking launch:</strong> pool routing per settlement asset (A5, A6) and 5 open decisions (D5&ndash;D9).</p>
   <div class="hero-tags"><span class="tag">XRP perps</span><span class="tag">B-Book</span><span class="tag orange">Development</span></div>
   <div class="hero-buttons">
@@ -180,7 +206,14 @@ pre.code .ok{color:var(--green)}
     <a class="button" href="https://ljpsn5lrmffy.jp.larksuite.com/wiki/XqptwR6v8iRTTZkNIwyjm2kzpyc?table=tblNegIS8ZlllJJ7">Lark task board</a>
     <a class="button" href="xrp-perps-delivery.html">中文</a>
   </div>
-  <div class="impact-strip"><div class="impact-cell"><span class="impact-number">3 / 12</span><span class="impact-label">our PRs opened</span></div><div class="impact-cell"><span class="impact-number orange">0</span><span class="impact-label">our PRs merged</span></div><div class="impact-cell"><span class="impact-number">4 / 4</span><span class="impact-label">Yehor's design PRs in review</span></div><div class="impact-cell"><span class="impact-number orange">5</span><span class="impact-label">decisions open</span></div></div>
+  <div class="impact-strip"><div class="impact-cell"><span class="impact-number">3 / 12</span><span class="impact-label">our PRs opened</span></div><div class="impact-cell"><span class="impact-number orange">0</span><span class="impact-label">our PRs merged</span></div><div class="impact-cell"><span class="impact-number">4 / 4</span><span class="impact-label">Yehor's design PRs in review</span></div><div class="impact-cell"><span class="impact-number orange">5</span><span class="impact-label">decisions open</span></div><div class="impact-cell"><span class="impact-number">11%</span><span class="impact-label">overall (4 / 36)</span></div></div>
+</section>
+<section class="doc-section section-wrap" id="overview"><div class="section-heading"><div><div class="section-kicker">Overall</div><h2>Overall timeline</h2></div><div class="section-aside">ALL</div></div>
+<div class="overall"><span class="impact-number">11%</span><div class="phase-bar"><i style="width:11%"></i></div><span class="quest-meta">4 / 36 items done (phases 0–3 plus frontend / MM / docs; excludes after-launch and PR 13)</span></div>
+<div class="ms-track"><div class="ms done"><span class="quest-type">DONE</span><div class="ms-id">M0</div><h4>Design approved (spec v9)</h4><div class="ms-date">2026-11-26 </div><div class="ms-owner">Leo, Yehor</div></div><div class="ms now"><span class="quest-type now">NOW</span><div class="ms-id">M1</div><h4>Decisions closed (D1–D9) and owners for frontend, MM, docs</h4><div class="ms-date">2026-11-28 (estimate)</div><div class="ms-owner">Requester, Yehor, Risk</div></div><div class="ms now crit"><span class="quest-type now">NOW</span><div class="ms-id">M2</div><h4>Yehor's settlement-assets design merged, incl. pre-XRP fixes and per-asset pool routing</h4><div class="ms-date">2026-12-05 (estimate)</div><div class="ms-owner">Joker</div></div><div class="ms now"><span class="quest-type now">NOW</span><div class="ms-id">M3</div><h4>Our PRs 1–12 merged (3 in review)</h4><div class="ms-date">2026-12-10 (estimate)</div><div class="ms-owner">Leo / Claude</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M4</div><h4>Frontend, MM integration and public docs ready</h4><div class="ms-date">2026-12-10 (estimate)</div><div class="ms-owner">TBD</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M5</div><h4>INVISIBLE launch: markets, bootstrap price, MM first fill (L1–L4)</h4><div class="ms-date">2026-12-12 (estimate)</div><div class="ms-owner">Leo, Joker, MM</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M6</div><h4>Drills passed (L5)</h4><div class="ms-date">2026-12-15 (estimate)</div><div class="ms-owner">Leo, QA</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">M7</div><h4>Public launch (L6)</h4><div class="ms-date">2026-12-17 (estimate)</div><div class="ms-owner">Requester</div></div><div class="ms next"><span class="quest-type next">NEXT</span><div class="ms-id">+</div><h4>After launch: watch alerts (P4), PR 13 deferred</h4><div class="ms-date">— </div><div class="ms-owner">Ops, Leo</div></div></div>
+<div class="callout warn"><span class="callout-icon">NOTE</span><p>Dates are estimates: the code is AI-written, so the pace is set by review, integration and drills. <strong>M2 is the critical path</strong> (Yehor's settlement-assets design, including per-asset pool routing): the markets cannot open before it.</p></div>
+<div class="tbl-wrap"><table><thead><tr><th>Workstream</th><th>Owner</th><th>Done</th><th>In progress</th><th>Blocked / decide</th><th>Progress</th></tr></thead><tbody><tr><td><a href="#s0">Decisions</a></td><td>Requester, Yehor, Risk</td><td>4 / 9</td><td>0</td><td>5 decide</td><td><div class="ws-bar"><i style="width:44%"></i></div></td></tr><tr><td><a href="#s1">Yehor's design (Joker)</a></td><td>Joker</td><td>0 / 6</td><td>4</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2">Our PRs 1–12</a></td><td>Leo / Claude</td><td>0 / 12</td><td>3</td><td>0 (PR 13 deferred)</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2b">Frontend</a></td><td>TBD</td><td>0 / 1</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2b">MM integration</a></td><td>TBD</td><td>0 / 1</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s2b">Public docs</a></td><td>TBD</td><td>0 / 1</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s3">Launch</a></td><td>Leo, Joker, MM, QA</td><td>0 / 6</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr><tr><td><a href="#s4">After launch (not counted)</a></td><td>Ops, Finance, Leo</td><td>0 / 3</td><td>0</td><td>0</td><td><div class="ws-bar"><i style="width:0%"></i></div></td></tr></tbody></table></div>
+<div class="callout note"><span class="callout-icon">NEXT</span><div><p><strong>What happens next:</strong> review and merge #1900, #1898, #1899; start PR 1 and PR 2; requester, Yehor and Risk close D5–D9 and name owners for frontend, MM and docs.</p><p><strong>Critical path / blockers:</strong> M2 (A5, A6 not started); 5 open decisions (D5–D9); no owner yet for frontend, MM integration and public docs.</p></div></div>
 </section>
 <section class="doc-section section-wrap" id="legend">
   <div class="section-heading"><div><div class="section-kicker">Legend</div><h2>Status</h2></div><div class="section-aside">&middot;</div></div>
@@ -221,6 +254,11 @@ pre.code .ok{color:var(--green)}
 <details class="quest" open><summary class="quest-head"><span class="quest-index">PR 12</span><span class="quest-type now">NOW</span><h3><a href="https://github.com/layer-3/neodax/pull/1899">#1899</a> Funding imbalance metric and alert</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>In review. Alert only for markets settled within the last hour, tolerance 1e-6. Rebase after whichever of #1898 / #1899 merges first.</p></div></details>
 <details class="quest" open><summary class="quest-head"><span class="quest-index">PR 13</span><span class="quest-type bad">BLOCKED</span><h3>Funding through a per-asset clearing account</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Deferred until A5 (pool routing per settlement asset) is merged.</p></div></details>
 </div></section>
+<section class="doc-section section-wrap" id="s2b"><div class="section-heading"><div><div class="section-kicker">Phase 2b</div><h2>Work outside our PRs</h2></div><div class="section-aside">2B</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 3 done · the spec excludes frontend and market-maker work</div><div class="quest-list">
+<details class="quest" open><summary class="quest-head"><span class="quest-index">F1</span><span class="quest-type next">NEXT</span><h3>Frontend</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: TBD</div><p>XRP-denominated margin, PnL and fees; XRP transfer into and out of the perp account; funding disclosure (leg difference, unrelated to our own book).</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">F2</span><span class="quest-type next">NEXT</span><h3>Market-maker integration</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: TBD</div><p>Quoting on BTCXRP / ETHXRP; hedging with BTCUSDT / XRPUSDT (ETHUSDT) at equal notional; accepting funding option B; the first limit fill at launch (L4).</p></div></details>
+<details class="quest" open><summary class="quest-head"><span class="quest-index">F3</span><span class="quest-type next">NEXT</span><h3>Public docs</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: TBD</div><p>API docs (XRP-quoted markets, asset fields); product FAQ: funding formula, mark = our own last traded price, risk notes.</p></div></details>
+</div></section>
 <section class="doc-section section-wrap" id="s3"><div class="section-heading"><div><div class="section-kicker">Phase 3</div><h2>Launch</h2></div><div class="section-aside">03</div></div><div class="phase-bar"><i style="width:0%"></i></div><div class="quest-meta">0 / 6 done</div><div class="quest-list">
 <details class="quest"><summary class="quest-head"><span class="quest-index">L1</span><span class="quest-type next">NEXT</span><h3>Settlement-assets design steps 1&ndash;6</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Joker, us</div><p>XRP starts as <code>transfer_only</code>; verify the spot &rarr; perp &rarr; spot round trip.</p></div></details>
 <details class="quest"><summary class="quest-head"><span class="quest-index">L2</span><span class="quest-type next">NEXT</span><h3>Create the markets FROZEN and INVISIBLE</h3><span class="quest-expand">+</span></summary><div class="quest-content"><div class="quest-meta">Owner: Us</div><p>Run the bootstrap shell script; check that bootstrap mark/index events and the funding fields are published.</p></div></details>
@@ -236,12 +274,12 @@ pre.code .ok{color:var(--green)}
 </div></section>
 <section class="doc-section section-wrap" id="log">
   <div class="section-heading"><div><div class="section-kicker">Change log</div><h2>Change log</h2></div><div class="section-aside">&middot;</div></div>
-  <div class="tbl-wrap"><table><thead><tr><th>Rev</th><th>Date</th><th>Change</th></tr></thead><tbody><tr><td>rev 1</td><td>2026-11-26</td><td>Page created from spec v9, the Lark board and the live PR states.</td></tr></tbody></table></div>
+  <div class="tbl-wrap"><table><thead><tr><th>Rev</th><th>Date</th><th>Change</th></tr></thead><tbody><tr><td>rev 1</td><td>2026-11-26</td><td>Page created from spec v9, the Lark board and the live PR states.</td></tr><tr><td>rev 2</td><td>2026-11-26</td><td>Added the overall timeline (M0–M7), the per-workstream table and overall completion; added phase 2b: frontend, market-maker integration, public docs.</td></tr></tbody></table></div>
 </section>
 </main>
 <footer class="site-footer">
   <div class="footer-inner">
-    <span class="footer-meta">Yellow · XRP-quoted perps · delivery tracker · rev 1 · 2026-11-26</span>
+    <span class="footer-meta">Yellow · XRP-quoted perps · delivery tracker · rev 2 · 2026-11-26</span>
     <a class="back-top" href="#main">&uarr; BACK TO TOP</a>
   </div>
 </footer>
